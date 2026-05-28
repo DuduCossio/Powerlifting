@@ -2,10 +2,7 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::inertia('/', 'welcome')->name('home');
-
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
-});
-
-require __DIR__.'/settings.php';
+Route::inertia('/', 'Auth/Login')->name('login');
+Route::inertia('/juez', 'Judge/Index')->name('judge.index');
+Route::inertia('/mesa', 'Desk/Index')->name('desk.index');
+Route::inertia('/admin', 'Admin/Index')->name('admin.index');
