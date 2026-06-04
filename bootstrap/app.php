@@ -16,6 +16,16 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        $middleware->redirectGuestsTo(function () {
+            return route('login');
+        });
+
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\CheckRoleAdmin::class,
+            'mesa' => \App\Http\Middleware\CheckRoleDesk::class,
+            'juez' => \App\Http\Middleware\CheckRoleJudge::class,
+        ]);
+
         $middleware->web(append: [
             HandleAppearance::class,
             HandleInertiaRequests::class,
