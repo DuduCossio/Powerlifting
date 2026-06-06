@@ -1,11 +1,11 @@
-import { Head } from '@inertiajs/react';
 import { Icon } from '@iconify/react';
-import { DeskLayout } from '../../layouts/DeskLayout';
-import { AdminTopBar } from '../../components/admin/AdminTopBar';
+import { Head } from '@inertiajs/react';
 import { AdminAthletePanel } from '../../components/admin/AdminAthletePanel';
-import { AdminControlPanel } from '../../components/admin/AdminControlPanel';
 import { AdminAttemptBar } from '../../components/admin/AdminAttemptBar';
+import { AdminControlPanel } from '../../components/admin/AdminControlPanel';
+import { AdminTopBar } from '../../components/admin/AdminTopBar';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
+import { DeskLayout } from '../../layouts/DeskLayout';
 
 export default function AdminIndex() {
     const {
@@ -68,7 +68,7 @@ export default function AdminIndex() {
 
                     <aside className="rounded border border-outline-variant bg-surface-container p-6">
                         <p className="mb-4 font-label-caps text-label-caps tracking-widest text-on-surface-variant">SIGUIENTE ATLETA</p>
-                        <div className="flex h-full flex-col justify-between">
+                        <div className="flex h-full flex-col justify-between pb-6">
                             <div className="border-b border-outline-variant pb-4">
                                 <h3 className="font-headline-md text-headline-md uppercase text-on-surface">{nextAthlete.name}</h3>
                                 <p className="font-body-base text-body-base text-on-surface-variant">{nextAthlete.detail}</p>
