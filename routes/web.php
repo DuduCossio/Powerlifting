@@ -2,18 +2,31 @@
 
 use Illuminate\Support\Facades\Route;
 
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Desk\CompetitorController;
+use App\Http\Controllers\Judge\VoteController;
+use App\Http\Controllers\Admin\DashboardController;
 
-Route::inertia('/', 'Auth/Login')->name('login');
+Route::middleware('guest')
+    ->group(function () {
 
-/*Route::middleware(['auth', 'admin'])
+        Route::inertia('/login', 'Auth/Login')
+            ->name('login');
+
+        Route::post('/login', [AuthenticatedSessionController::class, 'login'])
+            ->name('login.post');
+
+});
+
+Route::middleware(['auth', 'admin'])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
 
-        Route::resource('user', UserController::class)->name('dashboard');
+        Route::resource('dashboard', DashboardController::class)
+            ->only('index');
 
-});*/
+});
 
 Route::middleware(['auth', 'mesa'])
     ->prefix('desk')
@@ -21,6 +34,16 @@ Route::middleware(['auth', 'mesa'])
     ->group(function () {
 
         Route::resource('competitors', CompetitorController::class)
+            ->only('create' ,'store');
+
+});
+
+Route::middleware(['auth', 'juez'])
+    ->prefix('judge')
+    ->name('judge.')
+    ->group(function () {
+
+        Route::resource('votes', VoteController::class)
             ->only('create' ,'store');
 
 });

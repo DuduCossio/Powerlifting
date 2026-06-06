@@ -19,8 +19,8 @@ class AuthenticatedSessionController extends Controller
             $request->session()->regenerate();
 
             return match (Auth::user()->rol) {
-                'admin' => redirect()->intended('/admin/dashboard'),
-                'juez' => redirect()->intended('/judge/dashboard'),
+                'admin' => redirect()->route('admin.dashboard.index'),
+                'juez' => redirect()->route('judge.votes.create'),
                 'mesa' => redirect()->route('desk.competitors.create'),
                 default => redirect()->intended('/'), 
             };

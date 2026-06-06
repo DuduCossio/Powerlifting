@@ -34,6 +34,9 @@
         <link rel="icon" href="/favicon.svg" type="image/svg+xml">
         <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 
+        @routes 
+        @viteReactRefresh
+        @inertiaHead
         @fonts
 
         @viteReactRefresh
@@ -44,5 +47,6 @@
     </head>
     <body class="font-sans antialiased">
         <x-inertia::app />
+        @inertia
     </body>
 </html>

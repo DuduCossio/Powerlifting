@@ -7,5 +7,8 @@ use Illuminate\Http\Request;
 
 class VoteController extends Controller
 {
-    //
+    public function create()
+    {
+        return inertia('Judge/Index');
+    }
 }
