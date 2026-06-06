@@ -14,6 +14,8 @@ return new class extends Migration
         Schema::create('competitors', function (Blueprint $table) {
             $table->id();
             $table->foreignId('category_id')->constrained()->restrictOnDelete();
+            $table->foreignId('division_id')->constrained()->restrictOnDelete();
+            $table->foreignId('group_id')->constrained()->nullOnDelete();
 
             $table->string('name');
             $table->string('last_name');
