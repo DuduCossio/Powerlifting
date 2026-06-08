@@ -101,6 +101,7 @@ export default function Login() {
                     />
                   </div>
                   {errors.email && (<p className="text-error text-sm">{errors.email}</p>)}
+                  {errors.password && (<p className="text-error text-sm">{errors.password}</p>)}
                 </div>
 
               <button
