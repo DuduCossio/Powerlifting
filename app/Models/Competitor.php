@@ -22,4 +22,14 @@ class Competitor extends Model
     {
         return $this->hasMany(Result::class);
     }
+
+    public function group()
+    {
+        return $this->belongsTo(Group::class);
+    }
+
+    public function division()
+    {
+        return $this->belongsTo(Division::class);
+    }
 }
