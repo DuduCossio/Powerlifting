@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Model;
 
 #[Fillable(['name', 'last_name', 'sexo', 'body_weight', 'category_id', 'lot_number', 'division_id', 'group_id', 'age'])]
 class Competitor extends Model
@@ -25,7 +25,7 @@ class Competitor extends Model
             $lotNumber = random_int(1, 1000);
             $attempts++;
 
-            if (!self::where('lot_number', $lotNumber)->exists()) {
+            if (! self::where('lot_number', $lotNumber)->exists()) {
                 return $lotNumber;
             }
         } while ($attempts < 10);
@@ -56,5 +56,14 @@ class Competitor extends Model
     public function division()
     {
         return $this->belongsTo(Division::class);
+    }
+
+    public function attemptWeight(string $type, int $attemptNumber): ?float
+    {
+        $attempt = $this->attempts->first(function ($attempt) use ($type, $attemptNumber) {
+            return $attempt->type === $type && $attempt->attempt_number === $attemptNumber;
+        });
+
+        return $attempt?->weight;
     }
 }

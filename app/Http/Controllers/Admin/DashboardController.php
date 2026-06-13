@@ -3,12 +3,16 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Http\Request;
+use App\Services\CompetitionQueue;
 
 class DashboardController extends Controller
 {
-    public function index()
+    public function index(CompetitionQueue $competitionQueue)
     {
-        return inertia('Admin/Index');
+        $latestSessionGroups = $competitionQueue->groupsForLatestSession();
+
+        return inertia('Admin/Index', [
+            'latestSessionGroups' => $latestSessionGroups,
+        ]);
     }
 }
