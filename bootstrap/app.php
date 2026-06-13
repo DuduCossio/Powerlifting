@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Middleware\CheckRoleAdmin;
+use App\Http\Middleware\CheckRoleDesk;
+use App\Http\Middleware\CheckRoleJudge;
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
@@ -11,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
         web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
+        channels: __DIR__.'/../routes/channels.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
@@ -21,9 +25,9 @@ return Application::configure(basePath: dirname(__DIR__))
         });
 
         $middleware->alias([
-            'admin' => \App\Http\Middleware\CheckRoleAdmin::class,
-            'mesa' => \App\Http\Middleware\CheckRoleDesk::class,
-            'juez' => \App\Http\Middleware\CheckRoleJudge::class,
+            'admin' => CheckRoleAdmin::class,
+            'mesa' => CheckRoleDesk::class,
+            'juez' => CheckRoleJudge::class,
         ]);
 
         $middleware->web(append: [
