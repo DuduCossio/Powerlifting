@@ -1,6 +1,9 @@
 import { createInertiaApp } from '@inertiajs/react';
 import type { ResolvedComponent } from '@inertiajs/react';
 import { createRoot } from 'react-dom/client';
+import { echo } from './lib/echo';
+
+(window as any).Echo = echo;
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
