@@ -2,6 +2,9 @@ import { Icon } from '@iconify/react';
 
 interface AdminControlPanelProps {
     onAction: (action: string) => void;
+    busyAction?: string | null;
+    timeoutAttemptId?: number | null;
+    currentAttemptId?: number | null;
 }
 
 const actions = [
@@ -12,7 +15,7 @@ const actions = [
     { label: 'Limpiar pantalla', icon: 'material-symbols:tv-off', key: 'clear-screen', tone: 'neutral' as const },
 ] as const;
 
-export function AdminControlPanel({ onAction }: AdminControlPanelProps) {
+export function AdminControlPanel({ onAction, busyAction = null, timeoutAttemptId = null, currentAttemptId = null }: AdminControlPanelProps) {
     return (
         <section className="rounded border border-outline-variant bg-surface-container p-6">
             <header className="mb-4">
@@ -27,12 +30,17 @@ export function AdminControlPanel({ onAction }: AdminControlPanelProps) {
                         neutral: 'border border-outline-variant bg-surface-container-highest text-on-surface hover:border-outline',
                     }[action.tone];
 
+                    const isProcessing = action.key === 'time-out' && busyAction === 'time-out';
+                    const isAlreadyExecuted = action.key === 'time-out' && timeoutAttemptId === currentAttemptId && currentAttemptId !== null;
+                    const isDisabled = isProcessing || isAlreadyExecuted;
+
                     return (
                         <button
                             key={action.key}
                             type="button"
                             onClick={() => onAction(action.key)}
-                            className={`flex h-24 flex-col items-center justify-center gap-2 rounded px-4 py-3 font-label-caps text-label-caps transition-colors ${classNameByTone}`}
+                            disabled={isDisabled}
+                            className={`flex h-24 flex-col items-center justify-center gap-2 rounded px-4 py-3 font-label-caps text-label-caps transition-colors ${classNameByTone} ${isDisabled ? 'opacity-50 cursor-not-allowed hover:bg-transparent' : ''}`}
                         >
                             <Icon icon={action.icon} className="text-2xl" />
                             <span>{action.label}</span>
