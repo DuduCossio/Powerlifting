@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { DeskMobileNav } from '../components/desk/DeskMobileNav';
 import { DeskSidebar } from '../components/desk/DeskSidebar';
 
