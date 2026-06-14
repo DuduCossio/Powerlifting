@@ -7,6 +7,10 @@ use App\Http\Controllers\Desk\CompetitorController;
 use App\Http\Controllers\Judge\VoteController;
 use Illuminate\Support\Facades\Route;
 
+// Public routes
+Route::inertia('/', 'Spectator/Index')
+    ->name('spectator.index');
+
 Route::middleware('guest')
     ->group(function () {
 
@@ -30,6 +34,8 @@ Route::middleware(['auth', 'admin'])
             ->name('queue.next');
         Route::post('queue/time-out', [QueueController::class, 'timeOut'])
             ->name('queue.time-out');
+        Route::post('queue/clear-votes', [QueueController::class, 'clearVotes'])
+            ->name('queue.clear-votes');
         Route::get('queue/state', [QueueController::class, 'state'])
             ->name('queue.state');
         Route::get('attempt/{attemptId}/votes', [QueueController::class, 'getVotes'])

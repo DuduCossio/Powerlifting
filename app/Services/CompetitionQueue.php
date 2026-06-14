@@ -45,30 +45,103 @@ class CompetitionQueue
             ->orderBy('name')
             ->get();
 
-        return collect($groups->map(function (Group $group) {
+        $globalQueue = $this->buildGlobalQueue($groups)->toArray();
+
+        return collect($groups->map(function (Group $group) use ($globalQueue) {
             return [
                 'group' => $group->toArray(),
                 'queue' => $this->buildGroupQueue($group)->toArray(),
+                'globalQueue' => $globalQueue,
             ];
         }));
     }
 
-    protected function buildGroupQueue(Group $group): Collection
+    public function getGlobalQueue(): Collection
     {
-        $orderedAttemptTypes = [
-            Attempt::TYPE_SQUAT => [1, 2, 3],
-            Attempt::TYPE_BENCH_PRESS => [1, 2, 3],
-            Attempt::TYPE_DEADLIFT => [1, 2, 3],
+        $today = now()->startOfDay();
+
+        $sessionToday = ChampionshipSession::query()
+            ->where('date', $today->format('Y-m-d'))
+            ->first();
+
+        if ($sessionToday !== null) {
+            $latestDate = $sessionToday->date;
+        } else {
+            $latestDate = ChampionshipSession::query()
+                ->where('date', '<', $today->format('Y-m-d'))
+                ->orderByDesc('date')
+                ->value('date');
+
+            if ($latestDate === null) {
+                $latestDate = ChampionshipSession::query()
+                    ->where('date', '>', $today->format('Y-m-d'))
+                    ->orderBy('date')
+                    ->value('date');
+            }
+        }
+
+        if ($latestDate === null) {
+            return collect();
+        }
+
+        $groups = Group::with(['championshipSession', 'competitors.category', 'competitors.division', 'competitors.attempts'])
+            ->whereHas('championshipSession', function ($query) use ($latestDate) {
+                $query->where('date', $latestDate);
+            })
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        return $this->buildGlobalQueue($groups);
+    }
+
+    protected function buildGlobalQueue($groups): Collection
+    {
+        $queue = collect();
+
+        // Iterar: Squat 1, Squat 2, Squat 3, Bench 1, 2, 3, Deadlift 1, 2, 3
+        $attemptSequence = [
+            [Attempt::TYPE_SQUAT, 1],
+            [Attempt::TYPE_SQUAT, 2],
+            [Attempt::TYPE_SQUAT, 3],
+            [Attempt::TYPE_BENCH_PRESS, 1],
+            [Attempt::TYPE_BENCH_PRESS, 2],
+            [Attempt::TYPE_BENCH_PRESS, 3],
+            [Attempt::TYPE_DEADLIFT, 1],
+            [Attempt::TYPE_DEADLIFT, 2],
+            [Attempt::TYPE_DEADLIFT, 3],
         ];
 
-        return collect($orderedAttemptTypes)
-            ->flatMap(function (array $attemptNumbers, string $type) use ($group) {
-                return collect($attemptNumbers)
-                    ->flatMap(function (int $attemptNumber) use ($group, $type) {
-                        return $this->orderedAttemptRows($group, $type, $attemptNumber);
-                    });
-            })
-            ->values();
+        foreach ($attemptSequence as [$type, $attemptNumber]) {
+            // Para cada intento, recolectar de todos los grupos
+            foreach ($groups as $group) {
+                $queue = $queue->merge($this->orderedAttemptRows($group, $type, $attemptNumber));
+            }
+        }
+
+        return $queue->values();
+    }
+
+    protected function buildGroupQueue(Group $group): Collection
+    {
+        $queue = collect();
+
+        // Squat: intentos 1, 2, 3
+        for ($attemptNum = 1; $attemptNum <= 3; $attemptNum++) {
+            $queue = $queue->merge($this->orderedAttemptRows($group, Attempt::TYPE_SQUAT, $attemptNum));
+        }
+
+        // Bench Press: intentos 1, 2, 3
+        for ($attemptNum = 1; $attemptNum <= 3; $attemptNum++) {
+            $queue = $queue->merge($this->orderedAttemptRows($group, Attempt::TYPE_BENCH_PRESS, $attemptNum));
+        }
+
+        // Deadlift: intentos 1, 2, 3
+        for ($attemptNum = 1; $attemptNum <= 3; $attemptNum++) {
+            $queue = $queue->merge($this->orderedAttemptRows($group, Attempt::TYPE_DEADLIFT, $attemptNum));
+        }
+
+        return $queue->values();
     }
 
     protected function orderedAttemptRows(Group $group, string $type, int $attemptNumber): Collection

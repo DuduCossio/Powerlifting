@@ -35,7 +35,11 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
     const [lastKnownQueueIndex, setLastKnownQueueIndex] = useState<number | null>(null);
 
     const queue = useMemo(() => {
-        return latestSessionGroups.flatMap((group) => group.queue || []);
+        // Usar la globalQueue (es la misma para todos los grupos, contiene TODOS los atletas en orden correcto)
+        if (latestSessionGroups.length > 0 && latestSessionGroups[0].globalQueue) {
+            return latestSessionGroups[0].globalQueue;
+        }
+        return [];
     }, [latestSessionGroups]);
 
     // Small corner message helper for validations
@@ -248,23 +252,28 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
         console.log('Admin action:', action);
         if (action === 'next-athlete') {
             // Client-side validation: require next weight and votes (or timeout)
-            if (!attemptWeight || attemptWeight.toString().trim() === '') {
-                showCornerMessage('Debe ingresar el peso del siguiente intento');
-                return;
-            }
+            // Only validate weight if NOT the third attempt (there is no 4th attempt)
+            let numeric: number | null = null;
 
-            // sanitize numeric input (allow comma or dot)
-            const raw = attemptWeight.toString().trim().replace(',', '.');
-            const numeric = parseFloat(raw);
-            if (Number.isNaN(numeric) || numeric <= 0) {
-                showCornerMessage('Ingrese un peso válido mayor que 0');
-                return;
-            }
+            if (currentAttemptNumber !== 3) {
+                if (!attemptWeight || attemptWeight.toString().trim() === '') {
+                    showCornerMessage('Debe ingresar el peso del siguiente intento');
+                    return;
+                }
 
-            // limit reasonable range
-            if (numeric > 9999) {
-                showCornerMessage('Peso demasiado grande');
-                return;
+                // sanitize numeric input (allow comma or dot)
+                const raw = attemptWeight.toString().trim().replace(',', '.');
+                numeric = parseFloat(raw);
+                if (Number.isNaN(numeric) || numeric <= 0) {
+                    showCornerMessage('Ingrese un peso válido mayor que 0');
+                    return;
+                }
+
+                // limit reasonable range
+                if (numeric > 9999) {
+                    showCornerMessage('Peso demasiado grande');
+                    return;
+                }
             }
 
             const votesOk = currentVotes.length === 3 || timeoutAttemptId === currentAttemptId;
@@ -278,7 +287,8 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
             const tokenMeta = document.head.querySelector('meta[name="csrf-token"]');
             const csrf = tokenMeta ? tokenMeta.getAttribute('content') : '';
 
-            const formatted = numeric.toFixed(2);
+            // For 3rd attempt, no weight needed; for earlier attempts, send the formatted weight
+            const formatted = currentAttemptNumber === 3 ? null : numeric?.toFixed(2);
 
             fetch('/admin/queue/next', {
                 method: 'POST',
@@ -355,6 +365,48 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                     }
                 })
                 .catch((err) => console.error(err))
+                .finally(() => {
+                    setBusyAction(null);
+                });
+        }
+
+        if (action === 'clear-votes') {
+            // Si currentAttemptId es null, usar timeoutAttemptId como fallback
+            const attemptIdToUse = currentAttemptId ?? timeoutAttemptId;
+
+            if (!attemptIdToUse) {
+                showCornerMessage('No hay intento válido');
+                return;
+            }
+
+            setBusyAction(action);
+
+            const tokenMeta = document.head.querySelector('meta[name="csrf-token"]');
+            const csrf = tokenMeta ? tokenMeta.getAttribute('content') : '';
+
+            fetch('/admin/queue/clear-votes', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf ?? '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({ attempt_id: attemptIdToUse }),
+            })
+                .then((r) => r.json())
+                .then((data) => {
+                    if (data.success) {
+                        setCurrentVotes([]);
+                        setTimeoutAttemptId(null);
+                        showCornerMessage('Votos eliminados');
+                    } else {
+                        showCornerMessage(data.error || 'Error al limpiar votos');
+                    }
+                })
+                .catch((err) => {
+                    console.error(err);
+                    showCornerMessage('Error al limpiar votos');
+                })
                 .finally(() => {
                     setBusyAction(null);
                 });

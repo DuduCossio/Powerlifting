@@ -88,7 +88,7 @@ export default function AdminIndex({ latestSessionGroups }: { latestSessionGroup
           </aside>
         </section>
 
-        <AdminControlPanel onAction={handleAction} busyAction={busyAction} timeoutAttemptId={timeoutAttemptId} currentAttemptId={currentAttemptId} />
+        <AdminControlPanel onAction={handleAction} busyAction={busyAction} timeoutAttemptId={timeoutAttemptId} currentAttemptId={currentAttemptId} currentVotes={currentVotes} />
 
         <div className="mt-6">
           {isThirdAttempt ? (

@@ -91,7 +91,7 @@ class CompetitorController extends Controller
         });
 
         return redirect()
-            ->route('roster')
+            ->route('desk.roster')
             ->with('success', 'Competidor registrado exitosamente.');
     }
 }

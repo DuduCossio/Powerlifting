@@ -17,9 +17,7 @@ class QueueController extends Controller
 {
     public function next(Request $request, CompetitionQueue $competitionQueue)
     {
-        $groups = $competitionQueue->groupsForLatestSession();
-
-        $queue = collect($groups)->flatMap(fn ($g) => $g['queue'] ?? collect())->values();
+        $queue = $competitionQueue->getGlobalQueue();
 
         if ($queue->isEmpty()) {
             return Response::noContent();
@@ -62,6 +60,12 @@ class QueueController extends Controller
 
         $cacheKey = 'competition_current_index';
         $index = Cache::get($cacheKey, 0);
+
+        // Si el índice está fuera de rango, resetear a 0
+        if ($index >= $queue->count()) {
+            $index = 0;
+            Cache::put($cacheKey, $index);
+        }
 
         $index = $index + 1;
         if ($index >= $queue->count()) {
@@ -106,9 +110,7 @@ class QueueController extends Controller
 
     public function state(CompetitionQueue $competitionQueue)
     {
-        $groups = $competitionQueue->groupsForLatestSession();
-
-        $queue = collect($groups)->flatMap(fn ($g) => $g['queue'] ?? collect())->values();
+        $queue = $competitionQueue->getGlobalQueue();
 
         if ($queue->isEmpty()) {
             return Response::json(['current' => null, 'next' => null]);
@@ -116,6 +118,12 @@ class QueueController extends Controller
 
         $cacheKey = 'competition_current_index';
         $index = Cache::get($cacheKey, 0);
+
+        // Si el índice está fuera de rango, resetear a 0
+        if ($index >= $queue->count()) {
+            $index = 0;
+            Cache::put($cacheKey, $index);
+        }
 
         $current = $this->normalizeTimeoutAttempt($queue->get($index));
         $next = $queue->get($index + 1) ?? $queue->get(0);
@@ -151,9 +159,7 @@ class QueueController extends Controller
 
     public function timeOut(CompetitionQueue $competitionQueue)
     {
-        $groups = $competitionQueue->groupsForLatestSession();
-
-        $queue = collect($groups)->flatMap(fn ($g) => $g['queue'] ?? collect())->values();
+        $queue = $competitionQueue->getGlobalQueue();
 
         if ($queue->isEmpty()) {
             return Response::noContent();
@@ -161,6 +167,12 @@ class QueueController extends Controller
 
         $cacheKey = 'competition_current_index';
         $index = Cache::get($cacheKey, 0);
+
+        // Si el índice está fuera de rango, resetear a 0
+        if ($index >= $queue->count()) {
+            $index = 0;
+            Cache::put($cacheKey, $index);
+        }
 
         $current = $queue->get($index);
         $attemptId = $current['attempt_id'] ?? null;
@@ -226,6 +238,32 @@ class QueueController extends Controller
         return Response::json(['votes' => $votes]);
     }
 
+    public function clearVotes(Request $request)
+    {
+        $attemptId = $request->input('attempt_id');
+
+        if ($attemptId === null) {
+            return Response::json(['error' => 'attempt_id requerido'], 422);
+        }
+
+        $attempt = Attempt::find($attemptId);
+        if ($attempt === null) {
+            return Response::json(['error' => 'Intento no encontrado'], 404);
+        }
+
+        // Eliminar todos los votos para este intento
+        JudgeVote::where('attempt_id', $attemptId)->delete();
+
+        // Resetear el status a PENDING para permitir nuevos votos
+        $attempt->status = Attempt::STATUS_PENDING;
+        $attempt->save();
+
+        // Emitir evento para notificar a los jueces que los votos fueron eliminados
+        event(new VotesUpdated($attemptId, [], false));
+
+        return Response::json(['success' => true, 'message' => 'Votos eliminados']);
+    }
+
     protected function normalizeTimeoutAttempt(array $attemptEntry): array
     {
         if (! isset($attemptEntry['attempt_id']) || ! isset($attemptEntry['status'])) {
@@ -237,11 +275,11 @@ class QueueController extends Controller
         if ($voteCount === 0 && $attemptEntry['status'] === Attempt::STATUS_TIMEOUT) {
             $attempt = Attempt::find($attemptEntry['attempt_id']);
             if ($attempt !== null) {
-                $attempt->status = null;
+                $attempt->status = Attempt::STATUS_PENDING;
                 $attempt->save();
             }
 
-            $attemptEntry['status'] = null;
+            $attemptEntry['status'] = Attempt::STATUS_PENDING;
         }
 
         return $attemptEntry;

@@ -66,7 +66,7 @@ export default function DeskIndex({ categories, divisions, groups }: { categorie
                 </label>
 
                 <label className="flex flex-col gap-2">
-                  <span className="font-label-caps text-label-caps text-on-surface-variant">Peso Corporal (kg)</span>
+                  <span className="font-label-caps text-label-caps text-on-surface-variant">Peso (kg)</span>
                   <input
                     type="number"
                     step="0.01"

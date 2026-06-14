@@ -5,6 +5,7 @@ interface AdminControlPanelProps {
     busyAction?: string | null;
     timeoutAttemptId?: number | null;
     currentAttemptId?: number | null;
+    currentVotes?: string[];
 }
 
 const actions = [
@@ -15,7 +16,7 @@ const actions = [
     { label: 'Limpiar pantalla', icon: 'material-symbols:tv-off', key: 'clear-screen', tone: 'neutral' as const },
 ] as const;
 
-export function AdminControlPanel({ onAction, busyAction = null, timeoutAttemptId = null, currentAttemptId = null }: AdminControlPanelProps) {
+export function AdminControlPanel({ onAction, busyAction = null, timeoutAttemptId = null, currentAttemptId = null, currentVotes = [] }: AdminControlPanelProps) {
     return (
         <section className="rounded border border-outline-variant bg-surface-container p-6">
             <header className="mb-4">
@@ -32,7 +33,12 @@ export function AdminControlPanel({ onAction, busyAction = null, timeoutAttemptI
 
                     const isProcessing = action.key === 'time-out' && busyAction === 'time-out';
                     const isAlreadyExecuted = action.key === 'time-out' && timeoutAttemptId === currentAttemptId && currentAttemptId !== null;
-                    const isDisabled = isProcessing || isAlreadyExecuted;
+                    
+                    // Para clear-votes, bloquear si no hay votos
+                    const isClearVotesDisabled = action.key === 'clear-votes' && currentVotes.length === 0;
+                    const isClearVotesProcessing = action.key === 'clear-votes' && busyAction === 'clear-votes';
+                    
+                    const isDisabled = isProcessing || isAlreadyExecuted || isClearVotesDisabled || isClearVotesProcessing;
 
                     return (
                         <button
