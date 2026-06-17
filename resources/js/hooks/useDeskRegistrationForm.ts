@@ -148,19 +148,19 @@ export function useDeskRegistrationForm() {
                 type: 'squat',
                 attempt_number: 1,
                 weight: squatWeight,
-                status: 'success',
+                status: 'pending',
             },
             {
                 type: 'bench_press',
                 attempt_number: 1,
                 weight: benchWeight,
-                status: 'success',
+                status: 'pending',
             },
             {
                 type: 'deadlift',
                 attempt_number: 1,
                 weight: deadliftWeight,
-                status: 'success',
+                status: 'pending',
             },
         ];
 
