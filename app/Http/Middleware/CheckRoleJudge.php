@@ -16,13 +16,11 @@ class CheckRoleJudge
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(!Auth::check()) 
-        {
+        if(!Auth::check()) {
             return redirect()->route('login');
         }
 
-        if(Auth::user()->rol !== 'juez')
-        {
+        if(Auth::user()->rol !== 'juez') {
             abort(403, 'Acceso denegado. No tienes permisos de juez.');
         }
 

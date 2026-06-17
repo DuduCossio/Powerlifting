@@ -16,13 +16,11 @@ class CheckRoleDesk
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(!Auth::check())
-        {
+        if(!Auth::check()) {
             return redirect()->route('login');
         }
 
-        if(Auth::user()->rol !== "mesa")
-        {
+        if(Auth::user()->rol !== 'mesa') {
             abort(403, 'Acceso denegado. No tienes permisos de mesa.');
         }
 

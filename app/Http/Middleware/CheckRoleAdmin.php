@@ -16,16 +16,13 @@ class CheckRoleAdmin
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if(!Auth::check())
-        {
+        if(!Auth::check()) {
             return redirect()->route('login');
         }
 
-        if(Auth::user()->rol !== 'admin')
-        {
+        if(Auth::user()->rol !== 'admin') {
             abort(403, 'Acceso denegado. No tienes permisos de administrador.');
-        }    
-
+        }
 
         return $next($request);
     }
