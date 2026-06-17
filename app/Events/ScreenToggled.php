@@ -8,21 +8,18 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class CompetitionUpdated implements ShouldBroadcastNow
+class ScreenToggled implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public ?array $current;
+    public bool $isVisible;
 
-    public ?array $next;
+    public ?array $athleteData;
 
-    public bool $finished;
-
-    public function __construct(?array $current = null, ?array $next = null, bool $finished = false)
+    public function __construct(bool $isVisible = false, ?array $athleteData = null)
     {
-        $this->current = $current;
-        $this->next = $next;
-        $this->finished = $finished;
+        $this->isVisible = $isVisible;
+        $this->athleteData = $athleteData;
     }
 
     public function broadcastOn(): Channel
@@ -33,9 +30,8 @@ class CompetitionUpdated implements ShouldBroadcastNow
     public function broadcastWith(): array
     {
         return [
-            'current' => $this->current,
-            'next' => $this->next,
-            'finished' => $this->finished,
+            'isVisible' => $this->isVisible,
+            'athleteData' => $this->athleteData,
         ];
     }
 }

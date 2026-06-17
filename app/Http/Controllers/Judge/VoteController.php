@@ -33,8 +33,10 @@ class VoteController extends Controller
             ], 422);
         }
 
+        $currentUserId = Auth::id();
+
         $vote = JudgeVote::firstOrCreate([
-            'user_id' => Auth::id(),
+            'user_id' => $currentUserId,
             'attempt_id' => $validated['attempt_id'],
         ], [
             'vote' => $validated['vote'],
@@ -52,8 +54,24 @@ class VoteController extends Controller
             })
             ->toArray();
 
-        event(new VotesUpdated($validated['attempt_id'], $allVotes));
+        // Broadcast the personal vote so the voting judge can be immediately blocked locally
+        event(new VotesUpdated($validated['attempt_id'], $allVotes, false, $currentUserId));
 
-        return Response::json(['success' => true, 'votes' => $allVotes]);
+        // Determine majority (>=2) and finalize attempt status if reached
+        $validCount = collect($allVotes)->where('vote', 'valid')->count();
+        $invalidCount = collect($allVotes)->where('vote', 'invalid')->count();
+
+        $attempt = Attempt::find($validated['attempt_id']);
+        if ($attempt) {
+            if ($validCount >= 2) {
+                $attempt->status = Attempt::STATUS_SUCCESS;
+                $attempt->save();
+            } elseif ($invalidCount >= 2) {
+                $attempt->status = Attempt::STATUS_FAILED;
+                $attempt->save();
+            }
+        }
+
+        return Response::json(['success' => true, 'votes' => $allVotes, 'judge_id' => $currentUserId]);
     }
 }

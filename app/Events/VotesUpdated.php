@@ -18,11 +18,14 @@ class VotesUpdated implements ShouldBroadcastNow
 
     public bool $locked;
 
-    public function __construct(int $attemptId, array $votes = [], bool $locked = false)
+    public ?int $judgeId;
+
+    public function __construct(int $attemptId, array $votes = [], bool $locked = false, ?int $judgeId = null)
     {
         $this->attemptId = $attemptId;
         $this->votes = $votes;
         $this->locked = $locked;
+        $this->judgeId = $judgeId;
     }
 
     public function broadcastOn(): Channel
@@ -36,6 +39,7 @@ class VotesUpdated implements ShouldBroadcastNow
             'attemptId' => $this->attemptId,
             'votes' => $this->votes,
             'locked' => $this->locked,
+            'judgeId' => $this->judgeId,
         ];
     }
 }

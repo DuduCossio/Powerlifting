@@ -18,6 +18,10 @@ class Attempt extends Model
 
     public const STATUS_TIMEOUT = 'timeout';
 
+    public const STATUS_SUCCESS = 'success';
+
+    public const STATUS_FAILED = 'failed';
+
     public function competitor()
     {
         return $this->belongsTo(Competitor::class);

@@ -5,6 +5,8 @@ import { JudgeHeader } from '../../components/judge/JudgeHeader';
 import { VoteButton } from '../../components/judge/VoteButton';
 
 export default function JudgeIndex() {
+  const [judgeName, setJudgeName] = useState('JUEZ');
+  const [judgeId, setJudgeId] = useState<number | null>(null);
   const [athleteName, setAthleteName] = useState('SIN ATLETA');
   const [attempt, setAttempt] = useState(0);
   const [attemptType, setAttemptType] = useState('');
@@ -15,8 +17,21 @@ export default function JudgeIndex() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLocked, setIsLocked] = useState(false);
 
-  // Fetch initial state and subscribe to broadcasts
+  // Fetch initial state and get authenticated judge info
   useEffect(() => {
+    // Get authenticated judge info
+    fetch('/judge/user', {
+      headers: { 'X-Requested-With': 'XMLHttpRequest' },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.user) {
+          setJudgeName(data.user.name);
+          setJudgeId(data.user.id);
+        }
+      })
+      .catch(() => { });
+
     // initial fetch
     fetch('/judge/queue/state', {
       headers: { 'X-Requested-With': 'XMLHttpRequest' },
@@ -64,10 +79,21 @@ export default function JudgeIndex() {
         return;
       }
 
-      // Si hay votos en el payload, el juez ya votó
-      // Si el array está vacío, significa que se limpió, así que permite votar de nuevo
-      const hasVotes = Array.isArray(payload.votes) && payload.votes.length > 0;
-      setHasVoted(hasVotes);
+      // Si el array de votos está vacío y judgeId es null, significa que el admin limpió los votos
+      const adminClearedVotes = payload.judgeId === null && Array.isArray(payload.votes) && payload.votes.length === 0;
+      
+      // Solo bloquearse si el juez que votó es el usuario actual
+      // Si judgeId es null, es una acción de admin (timeout/clearVotes), así que no bloquearse
+      const shouldBlock = payload.judgeId !== null && payload.judgeId === judgeId;
+      
+      if (adminClearedVotes) {
+        // Admin limpió los votos, permitir votar de nuevo
+        setHasVoted(false);
+      } else if (shouldBlock) {
+        // Solo marcar como votado si eres el que votó
+        setHasVoted(true);
+      }
+      
       setIsLocked(payload.locked ?? false);
     };
 
@@ -80,7 +106,7 @@ export default function JudgeIndex() {
         channel.stopListening('VotesUpdated');
       } catch (e) { }
     };
-  }, [attemptId]);
+  }, [attemptId, judgeId]);
 
   // Evitar zoom con doble tap en móviles (similar al script del HTML original)
   useEffect(() => {
@@ -137,7 +163,7 @@ export default function JudgeIndex() {
       <Head title="IRON-FORGE | Interfaz Juez" />
 
       <JudgeHeader
-        judgeName="JUEZ 1"
+        judgeName={judgeName}
         athleteName={athleteName}
         attempt={attempt}
         attemptType={attemptType}
