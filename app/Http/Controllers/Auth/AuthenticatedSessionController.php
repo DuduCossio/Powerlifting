@@ -30,4 +30,15 @@ class AuthenticatedSessionController extends Controller
             'email' => 'Las credenciales no coinciden.',
         ]);
     }
+    
+    public function logout(Request $request)
+    {
+        Auth::logout();
+
+        $request->session()->invalidate();
+
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
+    }
 }
