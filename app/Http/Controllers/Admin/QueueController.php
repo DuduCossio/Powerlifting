@@ -3,14 +3,15 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Events\CompetitionUpdated;
+use App\Events\ScreenToggled;
 use App\Events\VotesUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Attempt;
+use App\Models\CompetitionState;
 use App\Models\JudgeVote;
 use App\Models\User;
 use App\Services\CompetitionQueue;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Response;
 
 class QueueController extends Controller
@@ -29,10 +30,42 @@ class QueueController extends Controller
         if ($nextWeight !== null && $attemptIdFromReq) {
             $attemptModel = Attempt::find($attemptIdFromReq);
             if ($attemptModel) {
-                $voteCount = JudgeVote::where('attempt_id', $attemptModel->id)->count();
+                $allVotes = JudgeVote::where('attempt_id', $attemptModel->id)
+                    ->with('user')
+                    ->get()
+                    ->map(function ($vote) {
+                        return [
+                            'judge_id' => $vote->user_id,
+                            'judge_name' => $vote->user->name ?? 'Juez',
+                            'vote' => $vote->vote,
+                        ];
+                    })
+                    ->toArray();
+
+                $voteCount = count($allVotes);
                 $isTimeout = ($attemptModel->status ?? null) === Attempt::STATUS_TIMEOUT;
+
+                // Require all judges before advancing unless it was a timeout
                 if ($voteCount < 3 && ! $isTimeout) {
                     return Response::json(['error' => 'Los votos no están completos'], 422);
+                }
+
+                $validCount = collect($allVotes)->where('vote', 'valid')->count();
+                $invalidCount = collect($allVotes)->where('vote', 'invalid')->count();
+
+                if (! $isTimeout) {
+                    if ($validCount >= 2) {
+                        $attemptModel->status = Attempt::STATUS_SUCCESS;
+                        $attemptModel->save();
+                    } elseif ($invalidCount >= 2) {
+                        $attemptModel->status = Attempt::STATUS_FAILED;
+                        $attemptModel->save();
+                    } else {
+                        return Response::json(['error' => 'No hay mayoría de votos'], 422);
+                    }
+
+                    // Ensure admin and judges see the final locked state
+                    event(new VotesUpdated($attemptModel->id, $allVotes, true, null));
                 }
 
                 $nextAttemptNumber = ($attemptModel->attempt_number ?? 0) + 1;
@@ -58,24 +91,25 @@ class QueueController extends Controller
             }
         }
 
-        $cacheKey = 'competition_current_index';
-        $index = Cache::get($cacheKey, 0);
+        $index = CompetitionState::first()?->current_index ?? 0;
 
-        // Si el índice está fuera de rango, resetear a 0
-        if ($index >= $queue->count()) {
-            $index = 0;
-            Cache::put($cacheKey, $index);
-        }
-
+        // Incrementar al siguiente intento
         $index = $index + 1;
         if ($index >= $queue->count()) {
-            $index = 0;
+            CompetitionState::updateOrCreate(['id' => 1], ['current_index' => $queue->count()]);
+
+            $current = null;
+            $next = null;
+
+            event(new CompetitionUpdated([], [], true));
+
+            return Response::json(['finished' => true, 'current' => null, 'next' => null]);
         }
 
-        Cache::put($cacheKey, $index);
+        CompetitionState::updateOrCreate(['id' => 1], ['current_index' => $index]);
 
         $current = $this->normalizeTimeoutAttempt($queue->get($index));
-        $next = $queue->get($index + 1) ?? $queue->get(0);
+        $next = $queue->get($index + 1) ?? null;
 
         $currentSummary = [
             'attempt_id' => $current['attempt_id'] ?? null,
@@ -88,20 +122,18 @@ class QueueController extends Controller
             'queue_index' => $index,
         ];
 
-        $nextIndex = $index + 1;
-        if ($nextIndex >= $queue->count()) {
-            $nextIndex = 0;
+        $nextSummary = null;
+        if ($next !== null) {
+            $nextSummary = [
+                'attempt_id' => $next['attempt_id'] ?? null,
+                'competitor_name' => $next['competitor_name'] ?? null,
+                'group_name' => $next['group_name'] ?? null,
+                'attempt_type' => $next['attempt_type'] ?? null,
+                'attempt_number' => $next['attempt_number'] ?? null,
+                'weight' => $next['weight'] ?? null,
+                'queue_index' => $index + 1,
+            ];
         }
-
-        $nextSummary = [
-            'attempt_id' => $next['attempt_id'] ?? null,
-            'competitor_name' => $next['competitor_name'] ?? null,
-            'group_name' => $next['group_name'] ?? null,
-            'attempt_type' => $next['attempt_type'] ?? null,
-            'attempt_number' => $next['attempt_number'] ?? null,
-            'weight' => $next['weight'] ?? null,
-            'queue_index' => $nextIndex,
-        ];
 
         event(new CompetitionUpdated($currentSummary, $nextSummary));
 
@@ -113,20 +145,17 @@ class QueueController extends Controller
         $queue = $competitionQueue->getGlobalQueue();
 
         if ($queue->isEmpty()) {
-            return Response::json(['current' => null, 'next' => null]);
+            return Response::json(['current' => null, 'next' => null, 'finished' => false]);
         }
 
-        $cacheKey = 'competition_current_index';
-        $index = Cache::get($cacheKey, 0);
+        $index = CompetitionState::first()?->current_index ?? 0;
 
-        // Si el índice está fuera de rango, resetear a 0
         if ($index >= $queue->count()) {
-            $index = 0;
-            Cache::put($cacheKey, $index);
+            return Response::json(['current' => null, 'next' => null, 'finished' => true]);
         }
 
         $current = $this->normalizeTimeoutAttempt($queue->get($index));
-        $next = $queue->get($index + 1) ?? $queue->get(0);
+        $next = $queue->get($index + 1) ?? null;
 
         $currentSummary = [
             'attempt_id' => $current['attempt_id'] ?? null,
@@ -139,22 +168,20 @@ class QueueController extends Controller
             'queue_index' => $index,
         ];
 
-        $nextIndex = $index + 1;
-        if ($nextIndex >= $queue->count()) {
-            $nextIndex = 0;
+        $nextSummary = null;
+        if ($next !== null) {
+            $nextSummary = [
+                'attempt_id' => $next['attempt_id'] ?? null,
+                'competitor_name' => $next['competitor_name'] ?? null,
+                'group_name' => $next['group_name'] ?? null,
+                'attempt_type' => $next['attempt_type'] ?? null,
+                'attempt_number' => $next['attempt_number'] ?? null,
+                'weight' => $next['weight'] ?? null,
+                'queue_index' => $index + 1,
+            ];
         }
 
-        $nextSummary = [
-            'attempt_id' => $next['attempt_id'] ?? null,
-            'competitor_name' => $next['competitor_name'] ?? null,
-            'group_name' => $next['group_name'] ?? null,
-            'attempt_type' => $next['attempt_type'] ?? null,
-            'attempt_number' => $next['attempt_number'] ?? null,
-            'weight' => $next['weight'] ?? null,
-            'queue_index' => $nextIndex,
-        ];
-
-        return Response::json(['current' => $currentSummary, 'next' => $nextSummary]);
+        return Response::json(['current' => $currentSummary, 'next' => $nextSummary, 'finished' => false]);
     }
 
     public function timeOut(CompetitionQueue $competitionQueue)
@@ -165,13 +192,10 @@ class QueueController extends Controller
             return Response::noContent();
         }
 
-        $cacheKey = 'competition_current_index';
-        $index = Cache::get($cacheKey, 0);
+        $index = CompetitionState::first()?->current_index ?? 0;
 
-        // Si el índice está fuera de rango, resetear a 0
         if ($index >= $queue->count()) {
-            $index = 0;
-            Cache::put($cacheKey, $index);
+            return Response::noContent();
         }
 
         $current = $queue->get($index);
@@ -211,7 +235,7 @@ class QueueController extends Controller
             })
             ->toArray();
 
-        event(new VotesUpdated($attempt->id, $allVotes, true));
+        event(new VotesUpdated($attempt->id, $allVotes, true, null));
 
         return Response::json([
             'success' => true,
@@ -259,7 +283,7 @@ class QueueController extends Controller
         $attempt->save();
 
         // Emitir evento para notificar a los jueces que los votos fueron eliminados
-        event(new VotesUpdated($attemptId, [], false));
+        event(new VotesUpdated($attemptId, [], false, null));
 
         return Response::json(['success' => true, 'message' => 'Votos eliminados']);
     }
@@ -283,5 +307,80 @@ class QueueController extends Controller
         }
 
         return $attemptEntry;
+    }
+
+    public function broadcast(CompetitionQueue $competitionQueue)
+    {
+        $queue = $competitionQueue->getGlobalQueue();
+
+        if ($queue->isEmpty()) {
+            return Response::noContent();
+        }
+
+        $index = CompetitionState::first()?->current_index ?? 0;
+
+        if ($index >= $queue->count()) {
+            return Response::noContent();
+        }
+
+        $current = $this->normalizeTimeoutAttempt($queue->get($index));
+
+        $allVotes = JudgeVote::where('attempt_id', $current['attempt_id'] ?? null)
+            ->with('user')
+            ->get()
+            ->map(function ($vote) {
+                return [
+                    'judge_name' => $vote->user->name ?? 'Desconocido',
+                    'vote' => $vote->vote,
+                ];
+            })
+            ->toArray();
+
+        $athleteData = [
+            'name' => $current['competitor_name'] ?? 'SIN ATLETA',
+            'detail' => $current['group_name'] ?? 'Esperando datos',
+            'weightLabel' => ($current['weight'] ?? 0).' kg',
+            'votes' => $allVotes,
+            'attemptId' => $current['attempt_id'] ?? null,
+        ];
+
+        event(new ScreenToggled(true, $athleteData));
+
+        // Guardar el estado de la pantalla visible en BD
+        CompetitionState::updateOrCreate(
+            ['id' => 1],
+            [
+                'screen_visible' => true,
+                'screen_athlete_data' => $athleteData,
+            ]
+        );
+
+        return Response::json(['success' => true, 'athleteData' => $athleteData]);
+    }
+
+    public function clearScreen()
+    {
+        event(new ScreenToggled(false, null));
+
+        // Guardar el estado de la pantalla no visible en BD
+        CompetitionState::updateOrCreate(
+            ['id' => 1],
+            [
+                'screen_visible' => false,
+                'screen_athlete_data' => null,
+            ]
+        );
+
+        return Response::json(['success' => true]);
+    }
+
+    public function screenState()
+    {
+        $state = CompetitionState::first();
+
+        return Response::json([
+            'isVisible' => $state?->screen_visible ?? false,
+            'athleteData' => $state?->screen_athlete_data ?? null,
+        ]);
     }
 }
