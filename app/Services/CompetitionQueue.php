@@ -13,6 +13,7 @@ class CompetitionQueue
     {
         $today = now()->startOfDay();
 
+        // Try today first
         $sessionToday = ChampionshipSession::query()
             ->where('date', $today->format('Y-m-d'))
             ->first();
@@ -20,16 +21,29 @@ class CompetitionQueue
         if ($sessionToday !== null) {
             $latestDate = $sessionToday->date;
         } else {
+            // Look for any session before today with competitors
             $latestDate = ChampionshipSession::query()
                 ->where('date', '<', $today->format('Y-m-d'))
                 ->orderByDesc('date')
                 ->value('date');
 
+            // If no session before today, find the nearest session after today with competitors
             if ($latestDate === null) {
-                $latestDate = ChampionshipSession::query()
+                $sessions = ChampionshipSession::query()
                     ->where('date', '>', $today->format('Y-m-d'))
                     ->orderBy('date')
-                    ->value('date');
+                    ->get();
+
+                foreach ($sessions as $session) {
+                    $hasCompetitorsWithAttempts = Group::where('championship_session_id', $session->id)
+                        ->whereHas('competitors.attempts')
+                        ->exists();
+
+                    if ($hasCompetitorsWithAttempts) {
+                        $latestDate = $session->date;
+                        break;
+                    }
+                }
             }
         }
 
@@ -60,6 +74,7 @@ class CompetitionQueue
     {
         $today = now()->startOfDay();
 
+        // Try today first
         $sessionToday = ChampionshipSession::query()
             ->where('date', $today->format('Y-m-d'))
             ->first();
@@ -67,16 +82,29 @@ class CompetitionQueue
         if ($sessionToday !== null) {
             $latestDate = $sessionToday->date;
         } else {
+            // Look for any session before today with competitors
             $latestDate = ChampionshipSession::query()
                 ->where('date', '<', $today->format('Y-m-d'))
                 ->orderByDesc('date')
                 ->value('date');
 
+            // If no session before today, find the nearest session after today with competitors
             if ($latestDate === null) {
-                $latestDate = ChampionshipSession::query()
+                $sessions = ChampionshipSession::query()
                     ->where('date', '>', $today->format('Y-m-d'))
                     ->orderBy('date')
-                    ->value('date');
+                    ->get();
+
+                foreach ($sessions as $session) {
+                    $hasCompetitorsWithAttempts = Group::where('championship_session_id', $session->id)
+                        ->whereHas('competitors.attempts')
+                        ->exists();
+
+                    if ($hasCompetitorsWithAttempts) {
+                        $latestDate = $session->date;
+                        break;
+                    }
+                }
             }
         }
 
@@ -112,9 +140,9 @@ class CompetitionQueue
             [Attempt::TYPE_DEADLIFT, 3],
         ];
 
-        foreach ($attemptSequence as [$type, $attemptNumber]) {
-            // Para cada intento, recolectar de todos los grupos
-            foreach ($groups as $group) {
+        // Para cada grupo, recolectar todos los intentos en orden
+        foreach ($groups as $group) {
+            foreach ($attemptSequence as [$type, $attemptNumber]) {
                 $queue = $queue->merge($this->orderedAttemptRows($group, $type, $attemptNumber));
             }
         }
