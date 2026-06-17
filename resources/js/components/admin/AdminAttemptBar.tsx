@@ -35,12 +35,6 @@ export function AdminAttemptBar({ value, onChange, onSubmit }: AdminAttemptBarPr
               />
               <span className="absolute right-4 top-1/2 -translate-y-1/2 font-body-base text-body-base text-on-surface-variant">kg</span>
             </div>
-            <button
-              type="submit"
-              className="flex h-16 items-center justify-center rounded bg-secondary px-8 py-4 font-label-caps text-label-caps text-background transition-colors hover:bg-secondary-container"
-            >
-              Confirmar
-            </button>
           </div>
         </div>
         <div className="text-label-caps font-label-caps text-on-surface-variant">

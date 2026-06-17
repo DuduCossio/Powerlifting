@@ -81,6 +81,24 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                 const c = data.current ?? {};
                 const n = data.next ?? {};
 
+                if (data.finished) {
+                    setCurrent({
+                        name: 'Se acabaron los atletas',
+                        detail: 'Competencia finalizada',
+                        weightLabel: '',
+                    });
+                    setNext({
+                        name: 'Se acabaron los atletas',
+                        detail: 'Competencia finalizada',
+                        weightLabel: '',
+                    });
+                    setHeader('Competencia finalizada');
+                    setCurrentAttemptId(null);
+                    setCurrentVotes([]);
+                    setLastKnownQueueIndex(null);
+                    return;
+                }
+
                 if (!c || Object.keys(c).length === 0) {
                     setCurrent(emptyAthlete);
                     setNext(emptyAthlete);
@@ -111,7 +129,13 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                     setCurrentVotes([]);
                 }
 
-                if (!n || Object.keys(n).length === 0) {
+                if (data.finished) {
+                    setNext({
+                        name: 'Se acabaron los atletas',
+                        detail: 'Competencia finalizada',
+                        weightLabel: '',
+                    });
+                } else if (!n || Object.keys(n).length === 0) {
                     setNext(emptyAthlete);
                 } else {
                     const attemptLabel = attemptTypeLabels[n.attempt_type] ?? n.attempt_type;
@@ -179,6 +203,26 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
         const channel = win.Echo.channel('competition');
 
         const handler = (payload: any) => {
+            if (payload.finished) {
+                setCurrent({
+                    name: 'Se acabaron los atletas',
+                    detail: 'Competencia finalizada',
+                    weightLabel: '',
+                });
+                setNext({
+                    name: 'Se acabaron los atletas',
+                    detail: 'Competencia finalizada',
+                    weightLabel: '',
+                });
+                setHeader('Competencia finalizada');
+                setCurrentAttemptId(null);
+                setCurrentAttemptNumber(null);
+                setCurrentVotes([]);
+                setTimeoutAttemptId(null);
+                setLastKnownQueueIndex(null);
+                return;
+            }
+
             const c = payload.current ?? {};
             const n = payload.next ?? {};
 
@@ -204,10 +248,13 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
             setCurrentVotes([]);
             setTimeoutAttemptId(null);
 
+            const nextAttemptLabel = attemptTypeLabels[n.attempt_type] ?? n?.attempt_type;
             setNext({
-                name: n.competitor_name ?? emptyAthlete.name,
-                detail: n.group_name ? `${n.group_name}` : emptyAthlete.detail,
-                weightLabel: n.weight ? `${n.weight} kg` : emptyAthlete.weightLabel,
+                name: n?.competitor_name ?? emptyAthlete.name,
+                detail: n?.group_name && n?.attempt_type && typeof n?.attempt_number === 'number'
+                    ? `Grupo ${n.group_name} · ${nextAttemptLabel} · ${n.attempt_number}º intento`
+                    : emptyAthlete.detail,
+                weightLabel: n?.weight ? `${n.weight} kg` : emptyAthlete.weightLabel,
             });
 
             if (c.group_name && c.attempt_type && c.attempt_number) {
@@ -309,6 +356,28 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                 })
                 .then((data) => {
                     if (!data) return;
+
+                    if (data.finished) {
+                        setCurrent({
+                            name: 'Se acabaron los atletas',
+                            detail: 'Competencia finalizada',
+                            weightLabel: '',
+                        });
+                        setNext({
+                            name: 'Se acabaron los atletas',
+                            detail: 'Competencia finalizada',
+                            weightLabel: '',
+                        });
+                        setHeader('Competencia finalizada');
+                        setCurrentAttemptId(null);
+                        setCurrentAttemptNumber(null);
+                        setCurrentVotes([]);
+                        setTimeoutAttemptId(null);
+                        setLastKnownQueueIndex(null);
+                        setAttemptWeight('');
+                        return;
+                    }
+
                     if (data.current) {
                         const c = data.current;
                         setCurrent({
@@ -317,24 +386,35 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                             weightLabel: c.weight ? `${c.weight} kg` : emptyAthlete.weightLabel,
                         });
 
-                            // update attempt id and reset votes for the new current
-                            setCurrentAttemptId(c.attempt_id ?? null);
+                        setCurrentAttemptId(c.attempt_id ?? null);
                         setCurrentAttemptNumber(typeof c.attempt_number === 'number' ? c.attempt_number : null);
-                            setTimeoutAttemptId(null);
+                        setTimeoutAttemptId(null);
 
-                            // update known queue index so we ignore older broadcasts
-                            if (typeof c.queue_index === 'number') {
-                                setLastKnownQueueIndex(c.queue_index);
-                            }
+                        if (typeof c.queue_index === 'number') {
+                            setLastKnownQueueIndex(c.queue_index);
+                        }
 
                         const n = data.next;
-                        setNext({
-                            name: n?.competitor_name ?? emptyAthlete.name,
-                            detail: n?.group_name ? `${n.group_name}` : emptyAthlete.detail,
-                            weightLabel: n?.weight ? `${n.weight} kg` : emptyAthlete.weightLabel,
-                        });
+                        if (data.finished || !n) {
+                            setNext({
+                                name: 'Se acabaron los atletas',
+                                detail: 'Competencia finalizada',
+                                weightLabel: '',
+                            });
+                        } else {
+                            const nextAttemptLabel = attemptTypeLabels[n.attempt_type] ?? n.attempt_type;
+                            setNext({
+                                name: n.competitor_name,
+                                detail: `Grupo ${n.group_name} · ${nextAttemptLabel} · ${n.attempt_number}º intento`,
+                                weightLabel: `${n.weight} kg`,
+                            });
+                        }
 
-                        // clear the input so previous weight doesn't remain
+                        const currentAttemptLabel = attemptTypeLabels[c.attempt_type] ?? c.attempt_type;
+                        if (c.group_name && c.attempt_type && typeof c.attempt_number === 'number') {
+                            setHeader(`Grupo ${c.group_name} · ${currentAttemptLabel} · ${c.attempt_number}º intento`);
+                        }
+
                         setAttemptWeight('');
                     }
                 })
@@ -406,6 +486,66 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                 .catch((err) => {
                     console.error(err);
                     showCornerMessage('Error al limpiar votos');
+                })
+                .finally(() => {
+                    setBusyAction(null);
+                });
+        }
+
+        if (action === 'broadcast') {
+            setBusyAction(action);
+
+            const tokenMeta = document.head.querySelector('meta[name="csrf-token"]');
+            const csrf = tokenMeta ? tokenMeta.getAttribute('content') : '';
+
+            fetch('/admin/queue/broadcast', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf ?? '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({}),
+            })
+                .then((r) => r.json())
+                .then((data) => {
+                    if (data.success) {
+                        showCornerMessage('Pantalla enviada');
+                    }
+                })
+                .catch((err) => {
+                    console.error(err);
+                    showCornerMessage('Error al enviar pantalla');
+                })
+                .finally(() => {
+                    setBusyAction(null);
+                });
+        }
+
+        if (action === 'clear-screen') {
+            setBusyAction(action);
+
+            const tokenMeta = document.head.querySelector('meta[name="csrf-token"]');
+            const csrf = tokenMeta ? tokenMeta.getAttribute('content') : '';
+
+            fetch('/admin/queue/clear-screen', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf ?? '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({}),
+            })
+                .then((r) => r.json())
+                .then((data) => {
+                    if (data.success) {
+                        showCornerMessage('Pantalla limpiada');
+                    }
+                })
+                .catch((err) => {
+                    console.error(err);
+                    showCornerMessage('Error al limpiar pantalla');
                 })
                 .finally(() => {
                     setBusyAction(null);
