@@ -12,10 +12,12 @@ class CompetitionState extends Model
         'current_index',
         'screen_visible',
         'screen_athlete_data',
+        'panel_id',
     ];
 
     protected $casts = [
         'screen_athlete_data' => 'array',
         'screen_visible' => 'boolean',
+        'panel_id' => 'integer',
     ];
 }

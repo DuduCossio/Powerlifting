@@ -55,7 +55,7 @@ class VoteController extends Controller
             ->toArray();
 
         // Broadcast the personal vote so the voting judge can be immediately blocked locally
-        event(new VotesUpdated($validated['attempt_id'], $allVotes, false, $currentUserId));
+        event(new VotesUpdated($validated['attempt_id'], $allVotes, false, $currentUserId, Auth::user()->panel_id));
 
         // Determine majority (>=2) and finalize attempt status if reached
         $validCount = collect($allVotes)->where('vote', 'valid')->count();

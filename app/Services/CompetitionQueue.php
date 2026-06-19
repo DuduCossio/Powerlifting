@@ -9,56 +9,15 @@ use Illuminate\Support\Collection;
 
 class CompetitionQueue
 {
-    public function groupsForLatestSession(): Collection
+    public function groupsForLatestSession(?int $panelId = null): Collection
     {
-        $today = now()->startOfDay();
-
-        // Try today first
-        $sessionToday = ChampionshipSession::query()
-            ->where('date', $today->format('Y-m-d'))
-            ->first();
-
-        if ($sessionToday !== null) {
-            $latestDate = $sessionToday->date;
-        } else {
-            // Look for any session before today with competitors
-            $latestDate = ChampionshipSession::query()
-                ->where('date', '<', $today->format('Y-m-d'))
-                ->orderByDesc('date')
-                ->value('date');
-
-            // If no session before today, find the nearest session after today with competitors
-            if ($latestDate === null) {
-                $sessions = ChampionshipSession::query()
-                    ->where('date', '>', $today->format('Y-m-d'))
-                    ->orderBy('date')
-                    ->get();
-
-                foreach ($sessions as $session) {
-                    $hasCompetitorsWithAttempts = Group::where('championship_session_id', $session->id)
-                        ->whereHas('competitors.attempts')
-                        ->exists();
-
-                    if ($hasCompetitorsWithAttempts) {
-                        $latestDate = $session->date;
-                        break;
-                    }
-                }
-            }
-        }
+        $latestDate = $this->resolveLatestSessionDate($panelId);
 
         if ($latestDate === null) {
             return collect();
         }
 
-        $groups = Group::with(['championshipSession', 'competitors.category', 'competitors.division', 'competitors.attempts'])
-            ->whereHas('championshipSession', function ($query) use ($latestDate) {
-                $query->where('date', $latestDate);
-            })
-            ->orderBy('sort_order')
-            ->orderBy('name')
-            ->get();
-
+        $groups = $this->querySessionGroups($latestDate, $panelId);
         $globalQueue = $this->buildGlobalQueue($groups)->toArray();
 
         return collect($groups->map(function (Group $group) use ($globalQueue) {
@@ -70,57 +29,73 @@ class CompetitionQueue
         }));
     }
 
-    public function getGlobalQueue(): Collection
+    public function getGlobalQueue(?int $panelId = null): Collection
     {
-        $today = now()->startOfDay();
-
-        // Try today first
-        $sessionToday = ChampionshipSession::query()
-            ->where('date', $today->format('Y-m-d'))
-            ->first();
-
-        if ($sessionToday !== null) {
-            $latestDate = $sessionToday->date;
-        } else {
-            // Look for any session before today with competitors
-            $latestDate = ChampionshipSession::query()
-                ->where('date', '<', $today->format('Y-m-d'))
-                ->orderByDesc('date')
-                ->value('date');
-
-            // If no session before today, find the nearest session after today with competitors
-            if ($latestDate === null) {
-                $sessions = ChampionshipSession::query()
-                    ->where('date', '>', $today->format('Y-m-d'))
-                    ->orderBy('date')
-                    ->get();
-
-                foreach ($sessions as $session) {
-                    $hasCompetitorsWithAttempts = Group::where('championship_session_id', $session->id)
-                        ->whereHas('competitors.attempts')
-                        ->exists();
-
-                    if ($hasCompetitorsWithAttempts) {
-                        $latestDate = $session->date;
-                        break;
-                    }
-                }
-            }
-        }
+        $latestDate = $this->resolveLatestSessionDate($panelId);
 
         if ($latestDate === null) {
             return collect();
         }
 
-        $groups = Group::with(['championshipSession', 'competitors.category', 'competitors.division', 'competitors.attempts'])
+        $groups = $this->querySessionGroups($latestDate, $panelId);
+
+        return $this->buildGlobalQueue($groups);
+    }
+
+    protected function resolveLatestSessionDate(?int $panelId = null): ?string
+    {
+        $today = now()->startOfDay();
+
+        $sessionToday = ChampionshipSession::query()
+            ->where('date', $today->format('Y-m-d'))
+            ->first();
+
+        if ($sessionToday !== null) {
+            return $sessionToday->date;
+        }
+
+        $latestDate = ChampionshipSession::query()
+            ->where('date', '<', $today->format('Y-m-d'))
+            ->orderByDesc('date')
+            ->value('date');
+
+        if ($latestDate !== null) {
+            return $latestDate;
+        }
+
+        $sessions = ChampionshipSession::query()
+            ->where('date', '>', $today->format('Y-m-d'))
+            ->orderBy('date')
+            ->get();
+
+        foreach ($sessions as $session) {
+            $query = Group::where('championship_session_id', $session->id)
+                ->whereHas('competitors.attempts');
+
+            if ($panelId !== null) {
+                $query->where('panel_id', $panelId);
+            }
+
+            if ($query->exists()) {
+                return $session->date;
+            }
+        }
+
+        return null;
+    }
+
+    protected function querySessionGroups(string $latestDate, ?int $panelId = null): Collection
+    {
+        return Group::with(['championshipSession', 'competitors.category', 'competitors.division', 'competitors.attempts'])
+            ->when($panelId !== null, function ($query) use ($panelId) {
+                $query->where('panel_id', $panelId);
+            })
             ->whereHas('championshipSession', function ($query) use ($latestDate) {
                 $query->where('date', $latestDate);
             })
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get();
-
-        return $this->buildGlobalQueue($groups);
     }
 
     protected function buildGlobalQueue($groups): Collection

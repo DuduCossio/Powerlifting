@@ -12,13 +12,14 @@ use App\Models\JudgeVote;
 use App\Models\User;
 use App\Services\CompetitionQueue;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Response;
 
 class QueueController extends Controller
 {
     public function next(Request $request, CompetitionQueue $competitionQueue)
     {
-        $queue = $competitionQueue->getGlobalQueue();
+        $queue = $competitionQueue->getGlobalQueue(Auth::user()->panel_id);
 
         if ($queue->isEmpty()) {
             return Response::noContent();
@@ -65,7 +66,7 @@ class QueueController extends Controller
                     }
 
                     // Ensure admin and judges see the final locked state
-                    event(new VotesUpdated($attemptModel->id, $allVotes, true, null));
+                    event(new VotesUpdated($attemptModel->id, $allVotes, true, null, Auth::user()->panel_id));
                 }
 
                 $nextAttemptNumber = ($attemptModel->attempt_number ?? 0) + 1;
@@ -91,22 +92,22 @@ class QueueController extends Controller
             }
         }
 
-        $index = CompetitionState::first()?->current_index ?? 0;
+        $index = CompetitionState::where('panel_id', Auth::user()->panel_id)->first()?->current_index ?? 0;
 
         // Incrementar al siguiente intento
         $index = $index + 1;
         if ($index >= $queue->count()) {
-            CompetitionState::updateOrCreate(['id' => 1], ['current_index' => $queue->count()]);
+            CompetitionState::updateOrCreate(['panel_id' => Auth::user()->panel_id], ['current_index' => $queue->count()]);
 
             $current = null;
             $next = null;
 
-            event(new CompetitionUpdated([], [], true));
+            event(new CompetitionUpdated([], [], true, Auth::user()->panel_id));
 
             return Response::json(['finished' => true, 'current' => null, 'next' => null]);
         }
 
-        CompetitionState::updateOrCreate(['id' => 1], ['current_index' => $index]);
+        CompetitionState::updateOrCreate(['panel_id' => Auth::user()->panel_id], ['current_index' => $index]);
 
         $current = $this->normalizeTimeoutAttempt($queue->get($index));
         $next = $queue->get($index + 1) ?? null;
@@ -135,20 +136,20 @@ class QueueController extends Controller
             ];
         }
 
-        event(new CompetitionUpdated($currentSummary, $nextSummary));
+        event(new CompetitionUpdated($currentSummary, $nextSummary, false, Auth::user()->panel_id));
 
         return Response::json(['current' => $currentSummary, 'next' => $nextSummary]);
     }
 
     public function state(CompetitionQueue $competitionQueue)
     {
-        $queue = $competitionQueue->getGlobalQueue();
+        $queue = $competitionQueue->getGlobalQueue(Auth::user()->panel_id);
 
         if ($queue->isEmpty()) {
             return Response::json(['current' => null, 'next' => null, 'finished' => false]);
         }
 
-        $index = CompetitionState::first()?->current_index ?? 0;
+        $index = CompetitionState::where('panel_id', Auth::user()->panel_id)->first()?->current_index ?? 0;
 
         if ($index >= $queue->count()) {
             return Response::json(['current' => null, 'next' => null, 'finished' => true]);
@@ -186,13 +187,13 @@ class QueueController extends Controller
 
     public function timeOut(CompetitionQueue $competitionQueue)
     {
-        $queue = $competitionQueue->getGlobalQueue();
+        $queue = $competitionQueue->getGlobalQueue(Auth::user()->panel_id);
 
         if ($queue->isEmpty()) {
             return Response::noContent();
         }
 
-        $index = CompetitionState::first()?->current_index ?? 0;
+        $index = CompetitionState::where('panel_id', Auth::user()->panel_id)->first()?->current_index ?? 0;
 
         if ($index >= $queue->count()) {
             return Response::noContent();
@@ -235,7 +236,7 @@ class QueueController extends Controller
             })
             ->toArray();
 
-        event(new VotesUpdated($attempt->id, $allVotes, true, null));
+        event(new VotesUpdated($attempt->id, $allVotes, true, null, Auth::user()->panel_id));
 
         return Response::json([
             'success' => true,
@@ -283,7 +284,7 @@ class QueueController extends Controller
         $attempt->save();
 
         // Emitir evento para notificar a los jueces que los votos fueron eliminados
-        event(new VotesUpdated($attemptId, [], false, null));
+        event(new VotesUpdated($attemptId, [], false, null, Auth::user()->panel_id));
 
         return Response::json(['success' => true, 'message' => 'Votos eliminados']);
     }
@@ -311,13 +312,13 @@ class QueueController extends Controller
 
     public function broadcast(CompetitionQueue $competitionQueue)
     {
-        $queue = $competitionQueue->getGlobalQueue();
+        $queue = $competitionQueue->getGlobalQueue(Auth::user()->panel_id);
 
         if ($queue->isEmpty()) {
             return Response::noContent();
         }
 
-        $index = CompetitionState::first()?->current_index ?? 0;
+        $index = CompetitionState::where('panel_id', Auth::user()->panel_id)->first()?->current_index ?? 0;
 
         if ($index >= $queue->count()) {
             return Response::noContent();
@@ -342,13 +343,15 @@ class QueueController extends Controller
             'weightLabel' => ($current['weight'] ?? 0).' kg',
             'votes' => $allVotes,
             'attemptId' => $current['attempt_id'] ?? null,
+            'attemptType' => $current['attempt_type'] ?? null,
+            'attemptNumber' => $current['attempt_number'] ?? null,
         ];
 
-        event(new ScreenToggled(true, $athleteData));
+        event(new ScreenToggled(true, $athleteData, Auth::user()->panel_id));
 
         // Guardar el estado de la pantalla visible en BD
         CompetitionState::updateOrCreate(
-            ['id' => 1],
+            ['panel_id' => Auth::user()->panel_id],
             [
                 'screen_visible' => true,
                 'screen_athlete_data' => $athleteData,
@@ -360,11 +363,11 @@ class QueueController extends Controller
 
     public function clearScreen()
     {
-        event(new ScreenToggled(false, null));
+        event(new ScreenToggled(false, null, Auth::user()->panel_id));
 
         // Guardar el estado de la pantalla no visible en BD
         CompetitionState::updateOrCreate(
-            ['id' => 1],
+            ['panel_id' => Auth::user()->panel_id],
             [
                 'screen_visible' => false,
                 'screen_athlete_data' => null,
@@ -374,13 +377,20 @@ class QueueController extends Controller
         return Response::json(['success' => true]);
     }
 
-    public function screenState()
+    public function screenState(Request $request)
     {
-        $state = CompetitionState::first();
+        $panelId = $request->query('panel');
+
+        if ($panelId !== null) {
+            $state = CompetitionState::where('panel_id', $panelId)->first() ?? CompetitionState::first();
+        } else {
+            $state = CompetitionState::first();
+        }
 
         return Response::json([
             'isVisible' => $state?->screen_visible ?? false,
             'athleteData' => $state?->screen_athlete_data ?? null,
+            'panel' => $panelId,
         ]);
     }
 }

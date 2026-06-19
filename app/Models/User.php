@@ -13,7 +13,7 @@ use Laravel\Fortify\Contracts\PasskeyUser;
 use Laravel\Fortify\PasskeyAuthenticatable;
 use Laravel\Fortify\TwoFactorAuthenticatable;
 
-#[Fillable(['name', 'email', 'password', 'rol', 'status'])]
+#[Fillable(['name', 'email', 'password', 'rol', 'status', 'panel_id'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
 class User extends Authenticatable implements PasskeyUser
 {
@@ -25,7 +25,6 @@ class User extends Authenticatable implements PasskeyUser
      *
      * @return array<string, string>
      */
-    
     protected function casts(): array
     {
         return [
@@ -38,5 +37,10 @@ class User extends Authenticatable implements PasskeyUser
     public function judgeVotes()
     {
         return $this->hasMany(JudgeVote::class);
+    }
+
+    public function panel()
+    {
+        return $this->belongsTo(Panel::class);
     }
 }

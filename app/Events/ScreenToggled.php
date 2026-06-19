@@ -16,15 +16,18 @@ class ScreenToggled implements ShouldBroadcastNow
 
     public ?array $athleteData;
 
-    public function __construct(bool $isVisible = false, ?array $athleteData = null)
+    public ?int $panelId;
+
+    public function __construct(bool $isVisible = false, ?array $athleteData = null, ?int $panelId = null)
     {
         $this->isVisible = $isVisible;
         $this->athleteData = $athleteData;
+        $this->panelId = $panelId;
     }
 
     public function broadcastOn(): Channel
     {
-        return new Channel('competition');
+        return new Channel('competition'.($this->panelId !== null ? '.'.$this->panelId : ''));
     }
 
     public function broadcastWith(): array

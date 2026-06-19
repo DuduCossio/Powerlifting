@@ -18,16 +18,19 @@ class CompetitionUpdated implements ShouldBroadcastNow
 
     public bool $finished;
 
-    public function __construct(?array $current = null, ?array $next = null, bool $finished = false)
+    public ?int $panelId;
+
+    public function __construct(?array $current = null, ?array $next = null, bool $finished = false, ?int $panelId = null)
     {
         $this->current = $current;
         $this->next = $next;
         $this->finished = $finished;
+        $this->panelId = $panelId;
     }
 
     public function broadcastOn(): Channel
     {
-        return new Channel('competition');
+        return new Channel('competition'.($this->panelId !== null ? '.'.$this->panelId : ''));
     }
 
     public function broadcastWith(): array

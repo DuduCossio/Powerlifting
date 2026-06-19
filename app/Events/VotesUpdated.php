@@ -20,17 +20,20 @@ class VotesUpdated implements ShouldBroadcastNow
 
     public ?int $judgeId;
 
-    public function __construct(int $attemptId, array $votes = [], bool $locked = false, ?int $judgeId = null)
+    public ?int $panelId;
+
+    public function __construct(int $attemptId, array $votes = [], bool $locked = false, ?int $judgeId = null, ?int $panelId = null)
     {
         $this->attemptId = $attemptId;
         $this->votes = $votes;
         $this->locked = $locked;
         $this->judgeId = $judgeId;
+        $this->panelId = $panelId;
     }
 
     public function broadcastOn(): Channel
     {
-        return new Channel('competition');
+        return new Channel('competition'.($this->panelId !== null ? '.'.$this->panelId : ''));
     }
 
     public function broadcastWith(): array
