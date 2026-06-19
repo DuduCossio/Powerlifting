@@ -19,7 +19,7 @@ return new class extends Migration
             $table->decimal('better_bench', 5, 2);
             $table->decimal('better_deadlift', 5, 2);
             $table->decimal('total', 7, 2);
-            $table->decimal('points_gl', 7, 2);
+            $table->decimal('points_ipf', 7, 2);
             $table->integer('position');
 
             $table->timestamps();

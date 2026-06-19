@@ -57,7 +57,7 @@ class ResultService
             'better_bench' => $betterBench,
             'better_deadlift' => $betterDeadlift,
             'total' => $total,
-            'points_gl' => 0,
+            'points_ipf' => 0,
             'position' => 0,
         ];
     }
