@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import { DeskMobileNav } from '../components/desk/DeskMobileNav';
 import { DeskSidebar } from '../components/desk/DeskSidebar';
 
-type DeskDesktopSection = 'competition' | 'registration' | 'rankings' | 'settings';
-type DeskMobileSection = 'dashboard' | 'registration' | 'judge';
+type DeskDesktopSection = 'competition' | 'dashboard' | 'rankings' | 'settings';
+type DeskMobileSection = 'dashboard' | 'competition' | 'registration' | 'judge';
 
 interface DeskLayoutProps {
     children: ReactNode;
@@ -25,17 +25,17 @@ export function DeskLayout({
     return (
         <div className="min-h-dvh overflow-x-hidden bg-background text-on-background">
             <DeskSidebar
-                activeItem={desktopActive}
+                activeItem="dashboard"
                 title={title}
                 subtitle={subtitle}
                 onCloseSession={onCloseSession}
             />
 
-            <main className="flex min-h-dvh flex-col pb-20 md:ml-64 md:pb-0">
+            <main className="flex min-h-dvh flex-col pb-20 lg:ml-64 lg:pb-0">
                 {children}
             </main>
 
-            <DeskMobileNav active={mobileActive} />
+            <DeskMobileNav active={mobileActive} onCloseSession={onCloseSession} />
         </div>
     );
 }

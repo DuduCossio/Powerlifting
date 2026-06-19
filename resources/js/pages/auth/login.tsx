@@ -23,7 +23,7 @@ export default function Login() {
           <h1 className="font-display-lg text-display-lg tracking-tighter text-primary uppercase">
               IRON-FORGE <span className="text-secondary-container">PLATFORM</span>
           </h1>
-          <p className="font-label-caps text-label-caps text-outline mt-2">ELITE COMPETITION MANAGEMENT SYSTEM</p>
+          <p className="font-label-caps text-label-caps text-outline mt-2">SISTEMA DE GESTIÓN DE COMPETICIONES</p>
         </header>
 
         <div className="bg-surface-container-lowest border border-outline-variant p-8 md:p-10 shadow-2xl relative overflow-hidden group">
@@ -84,7 +84,11 @@ export default function Login() {
                     >
                       CONTRASEÑA
                     </label>
-                    <a className="font-label-caps text-label-caps text-primary hover:text-secondary-container transition-colors" href="#">¿OLVIDÓ SU CLAVE?</a>
+                    {
+                      /*
+                        <a className="font-label-caps text-label-caps text-primary hover:text-secondary-container transition-colors" href="#">¿OLVIDÓ SU CLAVE?</a>
+                      */
+                    }
                   </div>
                   <div className="relative cyber-glow-focus border border-outline-variant bg-surface-container-low transition-all">
                     <Icon
@@ -134,17 +138,24 @@ export default function Login() {
               <div className="w-2 h-2 rounded-full bg-secondary animate-pulse"></div>
               <span className="font-label-caps text-label-caps text-on-surface-variant">SERVIDOR: ACTIVO</span>
             </div>
-            <span className="font-data-lg text-[10px] text-outline">v4.0.2-LOCKED</span>
+            {
+              /*
+                <span className="font-data-lg text-[10px] text-outline">v4.0.2-LOCKED</span>
+              */
+            }
           </div>
         </div>
-
-        <footer className="mt-12 text-center space-y-4">
-          <p className="font-label-caps text-label-caps text-outline">© 2024 IRON CORE COMPETITION MANAGEMENT. SYSTEM_AUTH_REQUIRED.</p>
-          <div className="flex justify-center gap-6">
-            <a className="font-label-caps text-label-caps text-outline hover:text-on-surface transition-colors underline decoration-outline-variant" href="#">TERMS OF SERVICE</a>
-            <a className="font-label-caps text-label-caps text-outline hover:text-on-surface transition-colors underline decoration-outline-variant" href="#">SECURITY PROTOCOL</a>
-          </div>
-        </footer>
+        {
+          /* 
+            <footer className="mt-12 text-center space-y-4">
+              <p className="font-label-caps text-label-caps text-outline">© 2024 IRON CORE COMPETITION MANAGEMENT. SYSTEM_AUTH_REQUIRED.</p>
+              <div className="flex justify-center gap-6">
+                <a className="font-label-caps text-label-caps text-outline hover:text-on-surface transition-colors underline decoration-outline-variant" href="#">TERMS OF SERVICE</a>
+                <a className="font-label-caps text-label-caps text-outline hover:text-on-surface transition-colors underline decoration-outline-variant" href="#">SECURITY PROTOCOL</a>
+              </div>
+            </footer>
+          */
+        }
       </main>
     </div>
   );

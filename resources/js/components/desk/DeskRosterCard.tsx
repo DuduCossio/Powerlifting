@@ -26,14 +26,6 @@ export function DeskRosterCard({ lastName, name, division, group, category, weig
         </div>
         <div className="flex gap-2">
           <button
-            className="flex w-auto items-center justify-center rounded 
-            bg-primary text-on-primary font-semibold px-2 transition-all 
-            hover:bg-primary-container active:scale-95"
-            aria-label={`Agregar intentos a ${name}`}
-          >
-            Agregar Intentos
-          </button>
-          <button
             type="button"
             className="flex h-10 w-10 items-center justify-center rounded bg-surface-variant/30 text-primary transition-all hover:bg-primary-container/20 active:scale-95"
             aria-label={`Ver ${name}`}
@@ -53,10 +45,10 @@ export function DeskRosterCard({ lastName, name, division, group, category, weig
       <div className="">
         <div className="border-l border-outline-variant/30 pl-3">
           <p className="text-[10px] font-label-caps uppercase tracking-[0.15em] text-on-surface-variant/70">Primer intento</p>
-          <div className="grid grid-cols-2 gap-5 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-2 gap-5  lg:grid-cols-2 xl:grid-cols-3">
             {
               attempts.map((attempt) => (
-                <p 
+                <div
                   key={attempt.id} 
                   className='mt-2 font-data-lg text-data-lg text-secondary'
                 >
@@ -67,7 +59,7 @@ export function DeskRosterCard({ lastName, name, division, group, category, weig
                       {attempt.type}
                     </p>
                   </div>
-                </p>
+                </div>
               ))
             }
           </div>

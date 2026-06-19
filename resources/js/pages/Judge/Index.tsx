@@ -7,6 +7,7 @@ import { VoteButton } from '../../components/judge/VoteButton';
 export default function JudgeIndex() {
   const [judgeName, setJudgeName] = useState('JUEZ');
   const [judgeId, setJudgeId] = useState<number | null>(null);
+  const [judgePanelId, setJudgePanelId] = useState<number | null>(null);
   const [athleteName, setAthleteName] = useState('SIN ATLETA');
   const [attempt, setAttempt] = useState(0);
   const [attemptType, setAttemptType] = useState('');
@@ -28,6 +29,7 @@ export default function JudgeIndex() {
         if (data.user) {
           setJudgeName(data.user.name);
           setJudgeId(data.user.id);
+          setJudgePanelId(data.user.panel_id ?? null);
         }
       })
       .catch(() => { });
@@ -60,7 +62,8 @@ export default function JudgeIndex() {
 
     setConnected(true);
 
-    const channel = win.Echo.channel('competition');
+    const channelName = judgePanelId ? `competition.${judgePanelId}` : 'competition';
+    const channel = win.Echo.channel(channelName);
     const handler = (payload: any) => {
       const c = payload.current ?? null;
       if (c) {
@@ -106,7 +109,7 @@ export default function JudgeIndex() {
         channel.stopListening('VotesUpdated');
       } catch (e) { }
     };
-  }, [attemptId, judgeId]);
+  }, [attemptId, judgeId, judgePanelId]);
 
   // Evitar zoom con doble tap en móviles (similar al script del HTML original)
   useEffect(() => {

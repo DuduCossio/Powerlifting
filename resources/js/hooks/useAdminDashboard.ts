@@ -4,6 +4,7 @@ export interface AdminAthleteSummary {
     name: string;
     detail: string;
     weightLabel: string;
+    attemptLabel?: string;
 }
 
 interface AdminDashboardProps {
@@ -22,7 +23,7 @@ const attemptTypeLabels: Record<string, string> = {
     deadlift: 'Peso Muerto',
 };
 
-export function useAdminDashboard(latestSessionGroups: any[]) {
+export function useAdminDashboard(latestSessionGroups: any[], panelId?: number | null) {
     const [attemptWeight, setAttemptWeight] = useState('');
     const [current, setCurrent] = useState<AdminAthleteSummary>(emptyAthlete);
     const [next, setNext] = useState<AdminAthleteSummary>(emptyAthlete);
@@ -39,6 +40,7 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
         if (latestSessionGroups.length > 0 && latestSessionGroups[0].globalQueue) {
             return latestSessionGroups[0].globalQueue;
         }
+
         return [];
     }, [latestSessionGroups]);
 
@@ -96,6 +98,7 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                     setCurrentAttemptId(null);
                     setCurrentVotes([]);
                     setLastKnownQueueIndex(null);
+                    
                     return;
                 }
 
@@ -106,13 +109,17 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                     setCurrentAttemptId(null);
                     setCurrentVotes([]);
                     setLastKnownQueueIndex(null);
+
                     return;
                 }
+
+                const currentAttemptLabel = c.attempt_type ? `${attemptTypeLabels[c.attempt_type] ?? c.attempt_type} · ${c.attempt_number}º intento` : undefined;
 
                 setCurrent({
                     name: c.competitor_name ?? emptyAthlete.name,
                     detail: c.group_name ? `${c.group_name}` : emptyAthlete.detail,
                     weightLabel: c.weight ? `${c.weight} kg` : emptyAthlete.weightLabel,
+                    attemptLabel: currentAttemptLabel,
                 });
 
                 setCurrentAttemptId(c.attempt_id ?? null);
@@ -141,13 +148,13 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                     const attemptLabel = attemptTypeLabels[n.attempt_type] ?? n.attempt_type;
                     setNext({
                         name: n.competitor_name,
-                        detail: `Grupo ${n.group_name} · ${attemptLabel} · ${n.attempt_number}º intento`,
+                        detail: `${n.group_name} · ${attemptLabel} · ${n.attempt_number}º intento`,
                         weightLabel: `${n.weight} kg`,
                     });
                 }
 
                 const attemptLabel = attemptTypeLabels[c.attempt_type] ?? c.attempt_type;
-                setHeader(`Grupo ${c.group_name} · ${attemptLabel} · ${c.attempt_number}º intento`);
+                setHeader(`${c.group_name} · ${attemptLabel} · ${c.attempt_number}º intento`);
             })
             .catch(() => {
                 // fallback to local queue-derived state
@@ -158,13 +165,17 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                     setCurrent(emptyAthlete);
                     setNext(emptyAthlete);
                     setHeader('Sin atletas en la sesión más reciente');
+
                     return;
                 }
+
+                const entryAttemptLabel = entry.attempt_type ? `${attemptTypeLabels[entry.attempt_type] ?? entry.attempt_type} · ${entry.attempt_number}º intento` : undefined;
 
                 setCurrent({
                     name: entry.competitor_name,
                     detail: `${entry.competitor_category ?? 'Sin categoría'} · ${entry.competitor_division ?? 'Sin división'}`,
                     weightLabel: `${entry.weight} kg`,
+                    attemptLabel: entryAttemptLabel,
                 });
 
                 const attemptId = entry.attempt_id ?? null;
@@ -179,13 +190,13 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                     const attemptLabel = attemptTypeLabels[nextEntry.attempt_type] ?? nextEntry.attempt_type;
                     setNext({
                         name: nextEntry.competitor_name,
-                        detail: `Grupo ${nextEntry.group_name} · ${attemptLabel} · ${nextEntry.attempt_number}º intento`,
+                        detail: `${nextEntry.group_name} · ${attemptLabel} · ${nextEntry.attempt_number}º intento`,
                         weightLabel: `${nextEntry.weight} kg`,
                     });
                 }
 
                 const attemptLabel = attemptTypeLabels[entry.attempt_type] ?? entry.attempt_type;
-                setHeader(`Grupo ${entry.group_name} · ${attemptLabel} · ${entry.attempt_number}º intento`);
+                setHeader(`${entry.group_name} · ${attemptLabel} · ${entry.attempt_number}º intento`);
             });
 
         return () => {
@@ -196,11 +207,13 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
     // Subscribe to competition broadcasts to stay in sync
     useEffect(() => {
         const win: any = window;
+
         if (!win?.Echo) {
             return;
         }
 
-        const channel = win.Echo.channel('competition');
+        const channelName = panelId ? `competition.${panelId}` : 'competition';
+        const channel = win.Echo.channel(channelName);
 
         const handler = (payload: any) => {
             if (payload.finished) {
@@ -220,6 +233,7 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                 setCurrentVotes([]);
                 setTimeoutAttemptId(null);
                 setLastKnownQueueIndex(null);
+
                 return;
             }
 
@@ -237,10 +251,13 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                 setLastKnownQueueIndex(incomingIndex);
             }
 
+            const currentAttemptLabel = c.attempt_type ? `${attemptTypeLabels[c.attempt_type] ?? c.attempt_type} · ${c.attempt_number}º intento` : undefined;
+
             setCurrent({
                 name: c.competitor_name ?? emptyAthlete.name,
                 detail: c.group_name ? `${c.group_name}` : emptyAthlete.detail,
                 weightLabel: c.weight ? `${c.weight} kg` : emptyAthlete.weightLabel,
+                attemptLabel: currentAttemptLabel,
             });
 
             setCurrentAttemptId(c.attempt_id ?? null);
@@ -259,7 +276,7 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
 
             if (c.group_name && c.attempt_type && c.attempt_number) {
                 const attemptLabel = attemptTypeLabels[c.attempt_type] ?? c.attempt_type;
-                setHeader(`Grupo ${c.group_name} · ${attemptLabel} · ${c.attempt_number}º intento`);
+                setHeader(`${c.group_name} · ${attemptLabel} · ${c.attempt_number}º intento`);
             }
         };
 
@@ -283,7 +300,7 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                 // ignore
             }
         };
-    }, [currentAttemptId]);
+    }, [currentAttemptId, panelId]);
 
     function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -297,6 +314,7 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
 
     function handleAction(action: string) {
         console.log('Admin action:', action);
+
         if (action === 'next-athlete') {
             // Client-side validation: require next weight and votes (or timeout)
             // Only validate weight if NOT the third attempt (there is no 4th attempt)
@@ -305,27 +323,33 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
             if (currentAttemptNumber !== 3) {
                 if (!attemptWeight || attemptWeight.toString().trim() === '') {
                     showCornerMessage('Debe ingresar el peso del siguiente intento');
+
                     return;
                 }
 
                 // sanitize numeric input (allow comma or dot)
                 const raw = attemptWeight.toString().trim().replace(',', '.');
                 numeric = parseFloat(raw);
+
                 if (Number.isNaN(numeric) || numeric <= 0) {
                     showCornerMessage('Ingrese un peso válido mayor que 0');
+
                     return;
                 }
 
                 // limit reasonable range
                 if (numeric > 9999) {
                     showCornerMessage('Peso demasiado grande');
+
                     return;
                 }
             }
 
             const votesOk = currentVotes.length === 3 || timeoutAttemptId === currentAttemptId;
+            
             if (!votesOk) {
                 showCornerMessage('Los 3 jueces deben votar o usar Nulo por tiempo antes de continuar');
+                
                 return;
             }
 
@@ -350,8 +374,10 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                     if (!r.ok) {
                         const json = await r.json().catch(() => ({}));
                         showCornerMessage(json.error || 'Error al avanzar: validación fallida');
+                        
                         return null;
                     }
+                    
                     return r.json();
                 })
                 .then((data) => {
@@ -375,15 +401,18 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                         setTimeoutAttemptId(null);
                         setLastKnownQueueIndex(null);
                         setAttemptWeight('');
+
                         return;
                     }
 
                     if (data.current) {
                         const c = data.current;
+                        const currentAttemptLabel = c.attempt_type ? `${attemptTypeLabels[c.attempt_type] ?? c.attempt_type} · ${c.attempt_number}º intento` : undefined;
                         setCurrent({
                             name: c.competitor_name ?? emptyAthlete.name,
                             detail: c.group_name ? `${c.group_name}` : emptyAthlete.detail,
                             weightLabel: c.weight ? `${c.weight} kg` : emptyAthlete.weightLabel,
+                            attemptLabel: currentAttemptLabel,
                         });
 
                         setCurrentAttemptId(c.attempt_id ?? null);
@@ -395,6 +424,7 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                         }
 
                         const n = data.next;
+
                         if (data.finished || !n) {
                             setNext({
                                 name: 'Se acabaron los atletas',
@@ -405,16 +435,17 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
                             const nextAttemptLabel = attemptTypeLabels[n.attempt_type] ?? n.attempt_type;
                             setNext({
                                 name: n.competitor_name,
-                                detail: `Grupo ${n.group_name} · ${nextAttemptLabel} · ${n.attempt_number}º intento`,
+                                detail: `${n.group_name} · ${nextAttemptLabel} · ${n.attempt_number}º intento`,
                                 weightLabel: `${n.weight} kg`,
                             });
                         }
 
-                        const currentAttemptLabel = attemptTypeLabels[c.attempt_type] ?? c.attempt_type;
                         if (c.group_name && c.attempt_type && typeof c.attempt_number === 'number') {
-                            setHeader(`Grupo ${c.group_name} · ${currentAttemptLabel} · ${c.attempt_number}º intento`);
+                            const headerAttemptLabel = attemptTypeLabels[c.attempt_type] ?? c.attempt_type;
+                            setHeader(`${c.group_name} · ${headerAttemptLabel} · ${c.attempt_number}º intento`);
                         }
 
+                        setCurrentVotes([]);
                         setAttemptWeight('');
                     }
                 })
@@ -456,6 +487,7 @@ export function useAdminDashboard(latestSessionGroups: any[]) {
 
             if (!attemptIdToUse) {
                 showCornerMessage('No hay intento válido');
+
                 return;
             }
 

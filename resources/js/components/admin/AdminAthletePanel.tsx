@@ -5,12 +5,13 @@ interface AdminAthletePanelProps {
   name: string;
   detail: string;
   weightLabel: string;
+  attemptLabel?: string;
   accent: 'primary' | 'secondary';
   compact?: boolean;
   votes?: ('valid' | 'invalid')[];
 }
 
-export function AdminAthletePanel({ label, name, detail, weightLabel, accent, compact = false, votes = [] }: AdminAthletePanelProps) {
+export function AdminAthletePanel({ label, name, detail, weightLabel, attemptLabel, accent, compact = false, votes = [] }: AdminAthletePanelProps) {
   const accentClasses = accent === 'primary'
     ? 'border-primary text-primary bg-primary/10'
     : 'border-secondary text-secondary bg-secondary/10';
@@ -39,14 +40,18 @@ export function AdminAthletePanel({ label, name, detail, weightLabel, accent, co
         </div>
       </header>
 
-      <div className="mt-6 grid gap-6 border-b border-outline-variant pb-6 md:grid-cols-2">
+      <div className="mt-6 grid gap-6 border-b border-outline-variant pb-6 md:grid-cols-3">
         <div>
           <span className="block font-label-caps text-label-caps text-on-surface-variant">Estado</span>
-          <span className="font-body-base text-body-base text-on-surface">{detail}</span> {/*aqui trae la categoria y division*/}
+          <span className="font-body-base text-body-base text-on-surface">{detail}</span>
+        </div>
+        <div className={compact ? 'text-left md:text-center' : 'text-left md:text-center'}>
+          <span className="block font-label-caps text-label-caps text-on-surface-variant">Intento actual</span>
+          <span className="font-data-lg text-data-lg text-secondary">{weightLabel}</span>
         </div>
         <div className={compact ? 'text-left md:text-right' : 'text-left md:text-right'}>
-          <span className="block font-label-caps text-label-caps text-on-surface-variant">Intento actual</span>
-          <span className="font-data-lg text-data-lg text-secondary">{weightLabel}</span> {/*aqui trae el peso del intento actual*/}
+          <span className="block font-label-caps text-label-caps text-on-surface-variant">Tipo / intento</span>
+          <span className="font-body-base text-body-base text-on-surface">{attemptLabel ?? '—'}</span>
         </div>
       </div>
 

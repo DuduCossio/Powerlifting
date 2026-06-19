@@ -1,5 +1,6 @@
 import { Icon } from '@iconify/react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import { route } from 'ziggy-js';
 import { AdminAthletePanel } from '../../components/admin/AdminAthletePanel';
 import { AdminAttemptBar } from '../../components/admin/AdminAttemptBar';
 import { AdminControlPanel } from '../../components/admin/AdminControlPanel';
@@ -7,7 +8,7 @@ import { AdminTopBar } from '../../components/admin/AdminTopBar';
 import { useAdminDashboard } from '../../hooks/useAdminDashboard';
 import { DeskLayout } from '../../layouts/DeskLayout';
 
-export default function AdminIndex({ latestSessionGroups }: { latestSessionGroups: any[] }) {
+export default function AdminIndex({ latestSessionGroups, panelId }: { latestSessionGroups: any[]; panelId?: number | null }) {
   const {
     currentAthlete,
     nextAthlete,
@@ -21,15 +22,15 @@ export default function AdminIndex({ latestSessionGroups }: { latestSessionGroup
     isThirdAttempt,
     confirmAttempt,
     handleAction,
-  } = useAdminDashboard(latestSessionGroups);
+  } = useAdminDashboard(latestSessionGroups, panelId);
 
   return (
     <DeskLayout
-      title="IRON-FORGE PLATFORM"
-      subtitle="MEET DIRECTOR"
+      title="IRON-FORGE"
+      subtitle="ADMIN DASHBOARD"
       desktopActive="competition"
       mobileActive="dashboard"
-      onCloseSession={() => console.log('Close session requested')}
+      onCloseSession={() => router.post(route('logout'))}
     >
       <Head title="IRON-FORGE PLATFORM - Admin Dashboard" />
 
@@ -52,13 +53,17 @@ export default function AdminIndex({ latestSessionGroups }: { latestSessionGroup
               {queueHeader}
             </p>
           </div>
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 rounded bg-primary px-6 py-3 font-label-caps text-label-caps text-on-primary transition-colors hover:bg-primary-container"
-          >
-            <Icon icon="material-symbols:queue" className="text-lg" />
-            Cargar Cola
-          </button>
+          {
+            /* 
+              <button
+                type="button"
+                className="inline-flex items-center gap-2 rounded bg-primary px-6 py-3 font-label-caps text-label-caps text-on-primary transition-colors hover:bg-primary-container"
+              >
+                <Icon icon="material-symbols:queue" className="text-lg" />
+                Cargar Cola
+              </button>
+            */
+          }
         </section>
 
         <section className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -68,6 +73,7 @@ export default function AdminIndex({ latestSessionGroups }: { latestSessionGroup
               name={currentAthlete.name}
               detail={currentAthlete.detail}
               weightLabel={currentAthlete.weightLabel}
+              attemptLabel={currentAthlete.attemptLabel}
               votes={currentVotes}
               accent="primary"
             />
