@@ -36,7 +36,7 @@ class StoreCompetitorRequest extends FormRequest
             'attempts.*.type' => ['required_with:attempts', 'in:squat,bench_press,deadlift'],
             'attempts.*.attempt_number' => ['required_with:attempts', 'integer', 'between:1,3'],
             'attempts.*.weight' => ['required_with:attempts', 'numeric', 'min:0'],
-            'attempts.*.status' => ['required_with:attempts', 'in:success,failure']
+            'attempts.*.status' => ['required_with:attempts', 'in:pending,success,failed'],
         ];
     }
 }

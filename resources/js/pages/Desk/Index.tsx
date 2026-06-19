@@ -1,5 +1,6 @@
 import { Icon } from '@iconify/react';
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
+import { route } from 'ziggy-js';
 import { AttemptInputCard } from '../../components/desk/AttemptInputCard';
 import { DeskHeader } from '../../components/desk/DeskHeader';
 import { DeskMobileNav } from '../../components/desk/DeskMobileNav';
@@ -7,17 +8,27 @@ import { DeskSidebar } from '../../components/desk/DeskSidebar';
 import { GroupSelector } from '../../components/desk/GroupSelector';
 import { useDeskRegistrationForm } from '../../hooks/useDeskRegistrationForm';
 
+
 export default function DeskIndex({ categories, divisions, groups }: { categories: any[]; divisions: any[]; groups: any[] }) {
-  const { form, errors, updateField, resetForm, handleSubmit } = useDeskRegistrationForm();
+  const { form, errors, isSubmitting, updateField, resetForm, handleSubmit } = useDeskRegistrationForm();
+
+  function handleCloseSession() {
+    router.post(route('logout'));
+  }
   
   return (
     <div className="min-h-dvh bg-background text-on-background">
       <Head title="IRON-FORGE | Mesa" />
 
-      <DeskSidebar onCloseSession={() => console.log('Close session requested')} />
+      <DeskSidebar 
+        title="IRON ARENA"
+        subtitle="MESA DE COMPETENCIA"
+        activeItem="competition"
+        onCloseSession={handleCloseSession} 
+      />
 
-      <main className="flex min-h-dvh will-change-contents flex-col pb-20 md:ml-64 md:pb-0">
-        <DeskHeader title="Registro de Atletas" subtitle="PLATFORM 1" />
+      <main className="flex min-h-dvh will-change-contents flex-col pb-20 lg:ml-64 lg:pb-0">
+        <DeskHeader title="Registro de Atletas" subtitle="Rellena los campos a continuación" />
 
         <div className="mx-auto w-full max-w-container-max flex-1 space-y-6 px-4 py-4 md:px-8 md:py-8">
           <section className="rounded border border-outline-variant bg-surface-container-lowest p-4 md:hidden">
@@ -208,16 +219,17 @@ export default function DeskIndex({ categories, divisions, groups }: { categorie
               </button>
               <button
                 type="submit"
-                className="flex-1 rounded bg-primary-container px-12 py-4 font-headline-md text-headline-md uppercase tracking-tight text-on-primary-container shadow-[0_0_15px_rgba(0,209,255,0.3)] transition-all hover:brightness-110"
+                disabled={isSubmitting}
+                className={`flex-1 rounded px-12 py-4 font-headline-md text-headline-md uppercase tracking-tight text-on-primary-container shadow-[0_0_15px_rgba(0,209,255,0.3)] transition-all ${isSubmitting ? 'bg-primary-container/80 cursor-not-allowed' : 'bg-primary-container hover:brightness-110'}`}
               >
-                REGISTRAR
+                {isSubmitting ? 'REGISTRANDO...' : 'REGISTRAR'}
               </button>
             </div>
           </form>
         </div>
       </main>
 
-      <DeskMobileNav active="registration" />
+      <DeskMobileNav active="competition" onCloseSession={handleCloseSession} />
     </div>
   );
 }

@@ -40,6 +40,7 @@ const initialErrors: DeskRegistrationFormErrors = {};
 export function useDeskRegistrationForm() {
     const [form, setForm] = useState<DeskRegistrationFormState>(initialState);
     const [errors, setErrors] = useState<DeskRegistrationFormErrors>(initialErrors);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     function updateField<FieldName extends keyof DeskRegistrationFormState>(field: FieldName, value: DeskRegistrationFormState[FieldName]) {
         setForm((current) => ({
@@ -176,12 +177,18 @@ export function useDeskRegistrationForm() {
             attempts,
         };
 
-        router.post(route('desk.competitors.store'), payload);
+        setIsSubmitting(true);
+
+        router.post(route('desk.competitors.store'), payload as any, {
+            onError: () => setIsSubmitting(false),
+            onFinish: () => setIsSubmitting(false),
+        });
     }
 
     return {
         form,
         errors,
+        isSubmitting,
         updateField,
         resetForm,
         handleSubmit,
