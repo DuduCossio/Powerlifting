@@ -104,3 +104,12 @@ body { background-color: #051424; }
 .btn-invalid:active { box-shadow: 0 0 40px rgba(239, 68, 68, 0.6); transform: scale(0.98); background-color: rgba(239, 68, 68, 0.1); }
 @keyframes pulse-soft { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
 .animate-pulse-soft { animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+
+#nprogress .bar {
+    background: #10b98199 !important;
+    height: 6px !important;
+}
+
+#nprogress .peg {
+    box-shadow: 0 0 10px #10b98199, 0 0 5px #10b98199 !important;
+}
